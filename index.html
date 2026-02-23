@@ -1251,6 +1251,7 @@ function enterDemoMode() {
         }
 
        // Auth state observer
+// Auth state observer
 if (firebaseInitialized && auth) {
     auth.onAuthStateChanged(async user => {
         console.log('Auth state changed:', user ? user.email : 'null');
@@ -1258,44 +1259,25 @@ if (firebaseInitialized && auth) {
         if (user) {
             // Check if email is verified
             if (!user.emailVerified) {
-                showToast('Please verify your email before continuing.', 'warning');
+                showToast('Please verify your email before continuing. Check your inbox.', 'warning');
+                await auth.signOut();
                 
-                // Show verification message - KEEP USER SIGNED IN
+                // Show verification message
                 document.getElementById('authForm').innerHTML = `
                     <div class="text-center">
                         <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
                             <i class="fas fa-envelope"></i>
                         </div>
                         <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                        <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${user.email}</strong>.</p>
-                        <p class="text-sm text-gray-500 mb-4">Please check your inbox and click the link to continue.</p>
-                        
-                        <button onclick="resendVerificationEmail()" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                            <i class="fas fa-redo mr-2"></i> Resend Verification Email
+                        <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
+                        <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                            Resend Email
                         </button>
-                        
-                        <button onclick="checkVerificationAndContinue()" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
-                            <i class="fas fa-check mr-2"></i> I've Verified - Continue
-                        </button>
-                        
-                        <button onclick="signOutAndReset()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Back to Login
+                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            I've Verified - Continue
                         </button>
                     </div>
                 `;
-                
-                // Create approval request in background
-                try {
-                    await db.collection('approvalRequests').doc(user.uid).set({
-                        email: user.email,
-                        requestedAt: new Date().toISOString(),
-                        status: 'pending',
-                        uid: user.uid
-                    });
-                } catch (e) {
-                    console.log('Could not create approval request:', e);
-                }
-                
                 return;
             }
             
@@ -1353,6 +1335,14 @@ if (firebaseInitialized && auth) {
                             </button>
                         </div>
                     `;
+                    
+                    // Create approval request
+                    await db.collection('approvalRequests').doc(user.uid).set({
+                        email: user.email,
+                        requestedAt: new Date().toISOString(),
+                        status: 'pending',
+                        uid: user.uid
+                    });
                     
                     return;
                 }
