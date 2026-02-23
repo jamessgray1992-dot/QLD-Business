@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QLD Business Development Report - All 77 LGAs</title>
+    <title>QLD Business Development & CRM System - All 77 LGAs</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -151,6 +151,67 @@
             border-radius: 9999px;
             font-weight: 600;
         }
+        
+        .main-tab {
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .main-tab.active {
+            color: #771414;
+            font-weight: 600;
+        }
+        
+        .main-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #771414;
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .status-to-price { background: #dbeafe; color: #1e40af; }
+        .status-priced { background: #dcfce7; color: #166534; }
+        .status-not-pricing { background: #f3f4f6; color: #6b7280; }
+        
+        .crm-contact-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .interaction-timeline {
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .interaction-timeline::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #e5e7eb;
+        }
+        
+        .not-won-card {
+            background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+            border-left: 4px solid #ef4444;
+        }
     </style>
 </head>
 <body class="text-gray-800 min-h-screen">
@@ -215,7 +276,7 @@
                             QLD
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-gray-900 display-font tracking-tight">Business Development Report</h1>
+                            <h1 class="text-xl font-bold text-gray-900 display-font tracking-tight">Business Development & CRM</h1>
                             <div class="flex items-center space-x-2 text-xs text-gray-500">
                                 <span id="userEmail"></span>
                                 <span id="demoBadge" class="hidden demo-badge">DEMO MODE</span>
@@ -253,137 +314,298 @@
             </div>
         </nav>
 
+        <!-- Main Navigation Tabs -->
+        <div class="bg-white border-b border-gray-200 sticky top-16 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-8">
+                    <button onclick="switchMainTab('tenders')" id="tab-tenders" class="main-tab active py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-file-contract mr-2 text-[#771414]"></i> Tenders & Opportunities
+                    </button>
+                    <button onclick="switchMainTab('crm')" id="tab-crm" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-users mr-2 text-blue-600"></i> CRM & Contacts
+                    </button>
+                    <button onclick="switchMainTab('analytics')" id="tab-analytics" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-chart-line mr-2 text-green-600"></i> Analytics & Pipeline
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             
-            <!-- Dashboard Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="stat-card rounded-xl p-6 shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Active Tenders</p>
-                            <h3 class="text-3xl font-bold text-gray-900" id="statActiveTenders">-</h3>
-                        </div>
-                        <div class="p-2 bg-red-50 rounded-lg">
-                            <i class="fas fa-file-contract text-[#771414] text-xl"></i>
-                        </div>
-                    </div>
-                    <p class="text-xs text-green-600 mt-2 flex items-center">
-                        <i class="fas fa-sync-alt mr-1 sync-indicator"></i> Live updates
-                    </p>
-                </div>
+            <!-- TENDERS TAB CONTENT -->
+            <div id="content-tenders" class="main-content">
                 
-                <div class="stat-card rounded-xl p-6 shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Awarded Works</p>
-                            <h3 class="text-3xl font-bold text-gray-900" id="statAwarded">-</h3>
-                        </div>
-                        <div class="p-2 bg-yellow-50 rounded-lg">
-                            <i class="fas fa-award text-yellow-600 text-xl"></i>
+                <!-- Dashboard Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">To Price</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statToPrice">-</h3>
+                            </div>
+                            <div class="p-2 bg-blue-50 rounded-lg">
+                                <i class="fas fa-calculator text-blue-600"></i>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">Total: <span class="font-semibold" id="statTotalValue">-</span></p>
+                    
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">Priced</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statPriced">-</h3>
+                            </div>
+                            <div class="p-2 bg-green-50 rounded-lg">
+                                <i class="fas fa-check-circle text-green-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">Not Pricing</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statNotPricing">-</h3>
+                            </div>
+                            <div class="p-2 bg-gray-50 rounded-lg">
+                                <i class="fas fa-ban text-gray-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">Awarded</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statAwarded">-</h3>
+                            </div>
+                            <div class="p-2 bg-yellow-50 rounded-lg">
+                                <i class="fas fa-trophy text-yellow-600"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Total: <span id="statTotalValue">-</span></p>
+                    </div>
+                    
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">Not Won</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statNotWon">-</h3>
+                            </div>
+                            <div class="p-2 bg-red-50 rounded-lg">
+                                <i class="fas fa-times-circle text-red-600"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="stat-card rounded-xl p-6 shadow-sm">
-                    <div class="flex justify-between items-start">
+
+                <!-- Region Selector -->
+                <div class="mb-8">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Local Contacts</p>
-                            <h3 class="text-3xl font-bold text-gray-900" id="statContacts">-</h3>
+                            <h2 class="text-2xl font-bold display-font text-gray-900">Select Region</h2>
+                            <p class="text-sm text-gray-500 mt-1">Browse by zone or search all 77 Queensland LGAs</p>
                         </div>
-                        <div class="p-2 bg-green-50 rounded-lg">
-                            <i class="fas fa-address-book text-green-600 text-xl"></i>
+                        
+                        <!-- Zone Filter -->
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="filterByZone('all')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-[#771414] text-white shadow-md transition-all" data-zone="all">
+                                All Zones
+                            </button>
+                            <button onclick="filterByZone('SEQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SEQ">
+                                South East QLD
+                            </button>
+                            <button onclick="filterByZone('NQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="NQ">
+                                North QLD
+                            </button>
+                            <button onclick="filterByZone('CQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="CQ">
+                                Central QLD
+                            </button>
+                            <button onclick="filterByZone('SWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SWQ">
+                                South West QLD
+                            </button>
+                            <button onclick="filterByZone('FWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="FWQ">
+                                Far North QLD
+                            </button>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">Across <span id="statRegions">-</span> regions</p>
-                </div>
-                
-                <div class="stat-card rounded-xl p-6 shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Closing Soon</p>
-                            <h3 class="text-3xl font-bold text-gray-900" id="statClosing">-</h3>
-                        </div>
-                        <div class="p-2 bg-orange-50 rounded-lg">
-                            <i class="fas fa-clock text-orange-600 text-xl"></i>
+                    
+                    <!-- Region Tabs Container -->
+                    <div class="region-group rounded-xl p-4 mb-6">
+                        <div class="flex space-x-2 overflow-x-auto pb-2 region-scroll" id="regionTabs" style="max-height: 200px; flex-wrap: wrap;">
+                            <!-- Tabs injected by JS -->
                         </div>
                     </div>
-                    <p class="text-xs text-orange-600 mt-2">Within 7 days</p>
+                    
+                    <div id="regionContent" class="space-y-6">
+                        <div class="flex items-center justify-center h-64">
+                            <div class="loading-skeleton w-full h-full rounded-xl"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Region Selector with Search -->
-            <div class="mb-8">
-                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold display-font text-gray-900">Select Region</h2>
-                        <p class="text-sm text-gray-500 mt-1">Browse by zone or search all 77 Queensland LGAs</p>
+            <!-- CRM TAB CONTENT -->
+            <div id="content-crm" class="main-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Customer Relationship Management</h2>
+                    <p class="text-gray-600">Manage all your council contacts, interactions, and relationship history across all 77 LGAs.</p>
+                </div>
+
+                <!-- CRM Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-blue-600 font-medium">Total Contacts</p>
+                                <h3 class="text-3xl font-bold text-blue-900" id="crmTotalContacts">-</h3>
+                            </div>
+                            <i class="fas fa-address-book text-blue-400 text-2xl"></i>
+                        </div>
                     </div>
-                    
-                    <!-- Zone Filter -->
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="filterByZone('all')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-[#771414] text-white shadow-md transition-all" data-zone="all">
-                            All Zones
-                        </button>
-                        <button onclick="filterByZone('SEQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SEQ">
-                            South East QLD
-                        </button>
-                        <button onclick="filterByZone('NQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="NQ">
-                            North QLD
-                        </button>
-                        <button onclick="filterByZone('CQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="CQ">
-                            Central QLD
-                        </button>
-                        <button onclick="filterByZone('SWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SWQ">
-                            South West QLD
-                        </button>
-                        <button onclick="filterByZone('FWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="FWQ">
-                            Far North QLD
-                        </button>
+                    <div class="bg-green-50 rounded-xl p-5 border border-green-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-600 font-medium">Active Relationships</p>
+                                <h3 class="text-3xl font-bold text-green-900" id="crmActiveContacts">-</h3>
+                            </div>
+                            <i class="fas fa-handshake text-green-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-5 border border-purple-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-purple-600 font-medium">Interactions (30 days)</p>
+                                <h3 class="text-3xl font-bold text-purple-900" id="crmRecentInteractions">-</h3>
+                            </div>
+                            <i class="fas fa-comments text-purple-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-5 border border-orange-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-orange-600 font-medium">Follow-ups Due</p>
+                                <h3 class="text-3xl font-bold text-orange-900" id="crmFollowups">-</h3>
+                            </div>
+                            <i class="fas fa-bell text-orange-400 text-2xl"></i>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Region Tabs Container -->
-                <div class="region-group rounded-xl p-4 mb-6">
-                    <div class="flex space-x-2 overflow-x-auto pb-2 region-scroll" id="regionTabs" style="max-height: 200px; flex-wrap: wrap;">
-                        <!-- Tabs injected by JS -->
+
+                <!-- CRM Filters -->
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <input type="text" id="crmSearch" placeholder="Search contacts by name, position, or council..." 
+                               class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
+                               onkeyup="searchCRM()">
+                    </div>
+                    <select id="crmRegionFilter" onchange="filterCRMByRegion()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                        <option value="all">All Regions</option>
+                        <!-- Options populated by JS -->
+                    </select>
+                    <button onclick="showAddCRMModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        <i class="fas fa-plus mr-2"></i> Add Contact
+                    </button>
+                </div>
+
+                <!-- CRM Contacts List -->
+                <div id="crmContactsList" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- ANALYTICS TAB CONTENT -->
+            <div id="content-analytics" class="main-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Analytics & Pipeline</h2>
+                    <p class="text-gray-600">Track your win rates, pricing performance, and pipeline value across all regions.</p>
+                </div>
+
+                <!-- Analytics Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Win Rate Card -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-bold mb-4">Win Rate Analysis</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <span class="text-gray-600">Total Tenders Priced</span>
+                                <span class="font-bold text-xl" id="analyticsTotalPriced">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                <span class="text-green-700">Won</span>
+                                <span class="font-bold text-xl text-green-700" id="analyticsWon">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                                <span class="text-red-700">Lost</span>
+                                <span class="font-bold text-xl text-red-700" id="analyticsLost">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                                <span class="text-blue-700">Win Rate</span>
+                                <span class="font-bold text-xl text-blue-700" id="analyticsWinRate">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Value Card -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-bold mb-4">Pipeline Value</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                                <span class="text-blue-700">To Price</span>
+                                <span class="font-bold text-xl text-blue-700" id="analyticsToPriceValue">$0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                <span class="text-green-700">Priced & Submitted</span>
+                                <span class="font-bold text-xl text-green-700" id="analyticsPricedValue">$0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                                <span class="text-yellow-700">Awarded Value</span>
+                                <span class="font-bold text-xl text-yellow-700" id="analyticsAwardedValue">$0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                                <span class="text-purple-700">Total Pipeline</span>
+                                <span class="font-bold text-xl text-purple-700" id="analyticsTotalPipeline">$0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div id="regionContent" class="space-y-6">
-                    <div class="flex items-center justify-center h-64">
-                        <div class="loading-skeleton w-full h-full rounded-xl"></div>
+
+                <!-- Region Performance -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-bold mb-4">Performance by Region</h3>
+                    <div id="regionPerformanceList" class="space-y-3">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Add/Edit Modal -->
-        <div id="entryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <!-- Tender Entry Modal -->
+        <div id="tenderModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                    <h3 class="text-xl font-bold display-font" id="modalTitle">Add New Entry</h3>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <h3 class="text-xl font-bold display-font" id="tenderModalTitle">Add New Tender</h3>
+                    <button onclick="closeTenderModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
-                <form id="entryForm" class="p-6 space-y-4">
-                    <input type="hidden" id="entryId">
-                    <input type="hidden" id="entryRegion">
-                    <input type="hidden" id="entryType">
+                <form id="tenderForm" class="p-6 space-y-4">
+                    <input type="hidden" id="tenderId">
+                    <input type="hidden" id="tenderRegion">
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Title/Project Name *</label>
-                            <input type="text" id="entryTitle" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
+                            <input type="text" id="tenderTitle" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select id="entryCategory" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
+                            <select id="tenderCategory" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
                                 <option value="Infrastructure">Infrastructure</option>
                                 <option value="Construction">Construction</option>
                                 <option value="Professional Services">Professional Services</option>
@@ -399,60 +621,336 @@
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Value ($)</label>
-                            <input type="text" id="entryValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                            <select id="tenderStatus" required onchange="togglePricingFields()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
+                                <option value="TO_PRICE">TO PRICE</option>
+                                <option value="PRICED">PRICED</option>
+                                <option value="NOT_PRICING">NOT PRICING</option>
+                                <option value="AWARDED">AWARDED</option>
+                                <option value="NOT_WON">NOT WON</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Value ($)</label>
+                            <input type="text" id="tenderValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Closing Date</label>
-                            <input type="date" id="entryDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <input type="date" id="tenderClosingDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                            <select id="entryPriority" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
-                                <option value="High">High</option>
-                                <option value="Medium" selected>Medium</option>
-                                <option value="Low">Low</option>
-                            </select>
+                        <!-- PRICED Fields -->
+                        <div id="pricedFields" class="col-span-2 hidden border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-green-700 mb-3 flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i> Pricing Details
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
+                                    <input type="text" id="ourPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Submission Date</label>
+                                    <input type="date" id="submissionDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                            <textarea id="entryDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
+                        <!-- NOT PRICING Fields -->
+                        <div id="notPricingFields" class="col-span-2 hidden border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-ban mr-2"></i> Reason for Not Pricing
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                    <select id="notPricingReason" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
+                                        <option value="">Select reason...</option>
+                                        <option value="Capacity">At Capacity</option>
+                                        <option value="Capability">Outside Capability</option>
+                                        <option value="Location">Too Remote</option>
+                                        <option value="Value">Too Small/Large</option>
+                                        <option value="Conflict">Conflict of Interest</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                                    <textarea id="notPricingComments" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- AWARDED Fields -->
+                        <div id="awardedFields" class="col-span-2 hidden border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-yellow-700 mb-3 flex items-center">
+                                <i class="fas fa-trophy mr-2"></i> Award Details
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Awarded Date</label>
+                                    <input type="date" id="awardedDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Contract Value ($)</label>
+                                    <input type="text" id="awardedValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Scope Summary</label>
+                                    <textarea id="awardedScope" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- NOT WON Fields -->
+                        <div id="notWonFields" class="col-span-2 hidden border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-red-700 mb-3 flex items-center">
+                                <i class="fas fa-times-circle mr-2"></i> Competitor Information
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Who Won?</label>
+                                    <input type="text" id="winnerName" placeholder="Company name" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Their Price ($) (if known)</label>
+                                    <input type="text" id="winnerPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
+                                    <input type="text" id="ourLosingPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Announced</label>
+                                    <input type="date" id="resultDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comments / Lessons Learned</label>
+                                    <textarea id="notWonComments" rows="3" placeholder="Why did we lose? What could we do better next time?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="col-span-2 border-t pt-4 mt-2">
                             <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
-                                <i class="fas fa-user-tie mr-2 text-[#771414]"></i> Contact Details
+                                <i class="fas fa-user-tie mr-2 text-[#771414]"></i> Council Contact Details
                             </h4>
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                            <input type="text" id="contactName" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <input type="text" id="tenderContactName" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                            <input type="text" id="contactPosition" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <input type="text" id="tenderContactPosition" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="contactEmail" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <input type="email" id="tenderContactEmail" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
                         
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input type="tel" id="contactPhone" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                            <input type="tel" id="tenderContactPhone" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
+                            <textarea id="tenderDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
                         </div>
                     </div>
                     
                     <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button type="button" onclick="closeTenderModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
                         <button type="submit" class="px-6 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] transition-colors shadow-lg">
-                            <i class="fas fa-save mr-2"></i> Save Entry
+                            <i class="fas fa-save mr-2"></i> Save Tender
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CRM Contact Modal -->
+        <div id="crmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                    <h3 class="text-xl font-bold display-font" id="crmModalTitle">Add CRM Contact</h3>
+                    <button onclick="closeCRMModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="crmForm" class="p-6 space-y-4">
+                    <input type="hidden" id="crmContactId">
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Region *</label>
+                            <select id="crmRegion" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Type</label>
+                            <select id="crmType" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                                <option value="Procurement">Procurement</option>
+                                <option value="Engineering">Engineering</option>
+                                <option value="Management">Management</option>
+                                <option value="Elected">Elected Member</option>
+                                <option value="Operations">Operations</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                            <input type="text" id="crmName" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Position/Title *</label>
+                            <input type="text" id="crmPosition" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <input type="text" id="crmDepartment" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Direct Phone</label>
+                            <input type="tel" id="crmDirectPhone" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                            <input type="tel" id="crmMobile" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                            <input type="email" id="crmEmail" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">LinkedIn Profile</label>
+                            <input type="url" id="crmLinkedIn" placeholder="https://linkedin.com/in/..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Relationship Notes</label>
+                            <textarea id="crmNotes" rows="3" placeholder="How did you meet? Interests, family, preferences..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
+                        </div>
+                        
+                        <div class="col-span-2 border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
+                                <i class="fas fa-clock mr-2"></i> Last Interaction
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                    <input type="date" id="crmLastContactDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                    <select id="crmLastContactType" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                                        <option value="">Select...</option>
+                                        <option value="Meeting">Meeting</option>
+                                        <option value="Phone">Phone Call</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Event">Industry Event</option>
+                                        <option value="Tender">Tender Discussion</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes from Last Contact</label>
+                                    <textarea id="crmLastContactNotes" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-span-2 border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-orange-900 mb-3 flex items-center">
+                                <i class="fas fa-bell mr-2"></i> Follow-up Reminder
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Next Follow-up Date</label>
+                                    <input type="date" id="crmFollowUpDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                    <select id="crmPriority" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                                        <option value="High">High</option>
+                                        <option value="Medium" selected>Medium</option>
+                                        <option value="Low">Low</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" onclick="closeCRMModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg">
+                            <i class="fas fa-save mr-2"></i> Save Contact
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Interaction Modal -->
+        <div id="interactionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                    <h3 class="text-xl font-bold display-font">Add Interaction</h3>
+                    <button onclick="closeInteractionModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="interactionForm" class="p-6 space-y-4">
+                    <input type="hidden" id="interactionContactId">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                        <input type="date" id="interactionDate" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                        <select id="interactionType" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                            <option value="Meeting">Meeting</option>
+                            <option value="Phone">Phone Call</option>
+                            <option value="Email">Email</option>
+                            <option value="Video">Video Call</option>
+                            <option value="Event">Industry Event</option>
+                            <option value="Site Visit">Site Visit</option>
+                            <option value="Tender Discussion">Tender Discussion</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes *</label>
+                        <textarea id="interactionNotes" required rows="4" placeholder="What was discussed? Any action items?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Next Steps</label>
+                        <input type="text" id="interactionNextSteps" placeholder="Any follow-up required?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" onclick="closeInteractionModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg">
+                            <i class="fas fa-plus mr-2"></i> Add Interaction
                         </button>
                     </div>
                 </form>
@@ -464,9 +962,9 @@
 
         <!-- Quick Actions -->
         <div class="fixed bottom-8 right-8 flex flex-col space-y-3">
-            <button onclick="showAddModal('tender')" class="w-14 h-14 bg-[#771414] text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all flex items-center justify-center group relative">
+            <button onclick="quickAdd()" class="w-14 h-14 bg-[#771414] text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all flex items-center justify-center group relative">
                 <i class="fas fa-plus text-xl"></i>
-                <span class="absolute right-16 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Add Tender</span>
+                <span class="absolute right-16 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Quick Add</span>
             </button>
         </div>
     </div>
@@ -565,6 +1063,7 @@
 
         // ==================== FIREBASE CONFIGURATION ====================
         // NOTE: Leave this as-is for demo mode to work automatically
+      
 const firebaseConfig = {
   apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
   authDomain: "queensland-business-reporting.firebaseapp.com",
@@ -582,6 +1081,7 @@ const firebaseConfig = {
         let isDemoMode = false;
         let unsubscribe = null;
         let currentZone = 'all';
+        let currentMainTab = 'tenders';
 
         // Initialize Firebase only if properly configured
         function initializeFirebase() {
@@ -591,7 +1091,6 @@ const firebaseConfig = {
                     db = firebase.firestore();
                     auth = firebase.auth();
                     
-                    // Enable offline persistence
                     db.enablePersistence({ synchronizeTabs: true })
                         .catch(err => console.log("Persistence failed:", err));
                     
@@ -605,7 +1104,11 @@ const firebaseConfig = {
 
         const firebaseInitialized = initializeFirebase();
 
-        let database = { tenders: [], awarded: [], contacts: [] };
+        let database = { 
+            tenders: [], 
+            crmContacts: [],
+            interactions: []
+        };
         let currentRegion = 'brisbane';
 
         // ==================== AUTHENTICATION & DEMO MODE ====================
@@ -619,8 +1122,7 @@ const firebaseConfig = {
             document.getElementById('userEmail').textContent = 'Demo Mode';
             document.getElementById('demoBadge').classList.remove('hidden');
             
-            // Load from localStorage if available
-            const saved = localStorage.getItem('qldBusinessData_demo');
+            const saved = localStorage.getItem('qldBusinessData_demo_v2');
             if (saved) {
                 try {
                     database = JSON.parse(saved);
@@ -647,13 +1149,11 @@ const firebaseConfig = {
                     document.getElementById('demoBadge').classList.add('hidden');
                     initializeApp();
                 } else if (!isDemoMode) {
-                    // Only show auth modal if not in demo mode
                     document.getElementById('authModal').classList.remove('hidden');
                     document.getElementById('mainApp').classList.add('hidden');
                 }
             });
         } else {
-            // No Firebase - show auth modal with demo option
             document.getElementById('authModal').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
         }
@@ -671,7 +1171,6 @@ const firebaseConfig = {
                 auth.signInWithEmailAndPassword(email, password)
                     .catch(error => {
                         showToast(error.message, 'error');
-                        // If auth fails, offer demo mode
                         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
                             setTimeout(() => {
                                 if (confirm('Login failed. Would you like to continue in Demo Mode instead?')) {
@@ -705,7 +1204,6 @@ const firebaseConfig = {
                     .then(() => showToast('Account created successfully!', 'success'))
                     .catch(error => {
                         showToast(error.message, 'error');
-                        // If auth fails, offer demo mode
                         setTimeout(() => {
                             if (confirm('Account creation failed. Continue in Demo Mode?')) {
                                 enterDemoMode();
@@ -720,7 +1218,6 @@ const firebaseConfig = {
 
         function signOut() {
             if (isDemoMode) {
-                // Clear demo data from memory but keep in localStorage
                 if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
                     isDemoMode = false;
                     currentUser = null;
@@ -737,18 +1234,16 @@ const firebaseConfig = {
         
         function initializeApp() {
             renderRegionTabs();
+            populateCRMRegionSelect();
             
             if (!isDemoMode && db && currentUser) {
-                // Real-time sync with Firestore
                 setupRealtimeSync();
             } else {
-                // Demo mode or no Firebase
                 if (!isDemoMode) loadSampleData();
                 loadRegion(currentRegion);
-                updateStats();
+                updateAllStats();
             }
             
-            // Monitor online status
             window.addEventListener('online', () => {
                 isOnline = true;
                 document.getElementById('offlineBanner').classList.remove('show');
@@ -770,10 +1265,10 @@ const firebaseConfig = {
                 if (doc.exists) {
                     database = doc.data();
                 } else {
-                    userDoc.set({ tenders: [], awarded: [], contacts: [] });
+                    userDoc.set({ tenders: [], crmContacts: [], interactions: [] });
                 }
                 loadRegion(currentRegion);
-                updateStats();
+                updateAllStats();
                 updateSyncStatus('Synced');
             }, err => {
                 console.error("Sync error:", err);
@@ -790,10 +1285,9 @@ const firebaseConfig = {
                         title: 'Road Infrastructure Upgrade - Northern Suburbs',
                         category: 'Infrastructure',
                         value: '$2.5M',
+                        status: 'TO_PRICE',
                         closingDate: '2024-12-15',
-                        priority: 'High',
                         description: 'Major road resurfacing and intersection improvements.',
-                        status: 'Open',
                         contact: { name: 'Sarah Mitchell', position: 'Senior Procurement Officer', email: 's.mitchell@brisbane.qld.gov.au', phone: '(07) 3403 8888' },
                         createdAt: new Date().toISOString()
                     },
@@ -803,51 +1297,84 @@ const firebaseConfig = {
                         title: 'Beachfront Revitalisation Project',
                         category: 'Construction',
                         value: '$8M',
+                        status: 'PRICED',
                         closingDate: '2024-12-20',
-                        priority: 'High',
+                        ourPrice: '$7.8M',
+                        submissionDate: '2024-12-18',
                         description: 'Boardwalk reconstruction and beach amenity upgrades.',
-                        status: 'Open',
                         contact: { name: 'James Chen', position: 'Infrastructure Manager', email: 'j.chen@goldcoast.qld.gov.au', phone: '(07) 5581 6984' },
                         createdAt: new Date().toISOString()
-                    }
-                ],
-                awarded: [
+                    },
                     {
-                        id: 101,
-                        regionId: 'brisbane',
-                        title: 'City Botanic Gardens Restoration',
-                        category: 'Environmental',
-                        value: '$1.2M',
-                        awardedDate: '2024-02-01',
-                        awardedTo: 'GreenSpace Constructions Pty Ltd',
-                        description: 'Heritage listed gardens restoration.',
-                        contact: { name: 'Michael Torres', position: 'Project Director', email: 'm.torres@brisbane.qld.gov.au', phone: '(07) 3403 8888' },
+                        id: 3,
+                        regionId: 'townsville',
+                        title: 'Water Treatment Plant Upgrade',
+                        category: 'Water & Sewerage',
+                        value: '$12M',
+                        status: 'NOT_WON',
+                        closingDate: '2024-11-30',
+                        ourLosingPrice: '$11.5M',
+                        winnerName: 'AquaTech Solutions Pty Ltd',
+                        winnerPrice: '$10.8M',
+                        resultDate: '2024-12-05',
+                        notWonComments: 'Lost on price. Competitor had existing relationship with council. Recommend building relationship with operations team before next tender.',
+                        description: 'Upgrade of main water treatment facility.',
+                        contact: { name: 'Michael Torres', position: 'Water Operations Manager', email: 'm.torres@townsville.qld.gov.au', phone: '(07) 4727 9680' },
                         createdAt: new Date().toISOString()
                     }
                 ],
-                contacts: [
+                crmContacts: [
                     {
-                        id: 201,
+                        id: 1,
                         regionId: 'brisbane',
                         name: 'Sarah Mitchell',
                         position: 'Senior Procurement Officer',
                         department: 'Infrastructure & Transport',
+                        type: 'Procurement',
                         email: 's.mitchell@brisbane.qld.gov.au',
-                        phone: '(07) 3403 8888',
+                        directPhone: '(07) 3403 8888',
                         mobile: '0400 123 456',
-                        notes: 'Preferred contact for civil works tenders',
-                        lastContact: '2024-02-15'
+                        notes: 'Prefers email contact. Interested in sustainable construction methods.',
+                        lastContactDate: '2024-02-15',
+                        lastContactType: 'Meeting',
+                        lastContactNotes: 'Discussed upcoming road infrastructure projects for Q2 2024.',
+                        followUpDate: '2024-03-15',
+                        priority: 'High',
+                        interactions: []
                     }
-                ]
+                ],
+                interactions: []
             };
         }
 
-        // ==================== REGION FILTERING ====================
+        // ==================== MAIN TAB SWITCHING ====================
+        
+        function switchMainTab(tab) {
+            currentMainTab = tab;
+            
+            // Update tab styles
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            // Show/hide content
+            document.querySelectorAll('.main-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('content-' + tab).classList.remove('hidden');
+            
+            // Refresh content
+            if (tab === 'tenders') {
+                loadRegion(currentRegion);
+            } else if (tab === 'crm') {
+                renderCRMContacts();
+            } else if (tab === 'analytics') {
+                renderAnalytics();
+            }
+        }
+
+        // ==================== REGION & TENDER FUNCTIONS ====================
         
         function filterByZone(zone) {
             currentZone = zone;
             
-            // Update zone buttons
             document.querySelectorAll('.zone-filter').forEach(btn => {
                 if (btn.dataset.zone === zone) {
                     btn.className = 'zone-filter px-4 py-2 rounded-full text-sm font-medium bg-[#771414] text-white shadow-md transition-all';
@@ -858,7 +1385,6 @@ const firebaseConfig = {
             
             renderRegionTabs();
             
-            // If current region not in filtered list, switch to first available
             const visibleRegions = getVisibleRegions();
             if (visibleRegions.length > 0 && !visibleRegions.find(r => r.id === currentRegion)) {
                 loadRegion(visibleRegions[0].id);
@@ -913,313 +1439,668 @@ const firebaseConfig = {
                             <p class="text-gray-500 mt-1">Population: ${region.population}</p>
                         </div>
                         <div class="flex space-x-3 mt-4 md:mt-0">
-                            <button onclick="showAddModal('tender')" class="px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] transition-colors shadow-md text-sm font-medium">
+                            <button onclick="showAddTenderModal()" class="px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] transition-colors shadow-md text-sm font-medium">
                                 <i class="fas fa-plus mr-2"></i> Add Tender
-                            </button>
-                            <button onclick="showAddModal('awarded')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors shadow-md text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i> Add Awarded Work
-                            </button>
-                            <button onclick="showAddModal('contact')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md text-sm font-medium">
-                                <i class="fas fa-plus mr-2"></i> Add Contact
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold display-font flex items-center">
-                                <i class="fas fa-file-alt text-[#771414] mr-2"></i> Available Tenders
-                                <span class="ml-2 bg-red-100 text-[#771414] text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId).length}</span>
+                <div class="space-y-6">
+                    <!-- TO PRICE Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
+                            <h3 class="font-bold text-blue-900 flex items-center">
+                                <i class="fas fa-calculator mr-2"></i> TO PRICE
+                                <span class="ml-2 bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId && t.status === 'TO_PRICE').length}</span>
                             </h3>
                         </div>
-                        <div class="space-y-4" id="tendersList">
-                            ${renderTenders(regionId)}
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${renderTendersByStatus(regionId, 'TO_PRICE')}
                         </div>
                     </div>
 
-                    <div class="lg:col-span-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold display-font flex items-center">
-                                <i class="fas fa-trophy text-yellow-600 mr-2"></i> Awarded Works
-                                <span class="ml-2 bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full">${database.awarded.filter(a => a.regionId === regionId).length}</span>
+                    <!-- PRICED Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-green-50 px-6 py-4 border-b border-green-100 flex justify-between items-center">
+                            <h3 class="font-bold text-green-900 flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i> PRICED
+                                <span class="ml-2 bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId && t.status === 'PRICED').length}</span>
                             </h3>
                         </div>
-                        <div class="space-y-4" id="awardedList">
-                            ${renderAwarded(regionId)}
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${renderTendersByStatus(regionId, 'PRICED')}
                         </div>
                     </div>
 
-                    <div class="lg:col-span-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold display-font flex items-center">
-                                <i class="fas fa-address-card text-green-600 mr-2"></i> Local Contacts
-                                <span class="ml-2 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">${database.contacts.filter(c => c.regionId === regionId).length}</span>
+                    <!-- NOT PRICING Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-900 flex items-center">
+                                <i class="fas fa-ban mr-2"></i> NOT PRICING
+                                <span class="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId && t.status === 'NOT_PRICING').length}</span>
                             </h3>
                         </div>
-                        <div class="space-y-4" id="contactsList">
-                            ${renderContacts(regionId)}
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${renderTendersByStatus(regionId, 'NOT_PRICING')}
+                        </div>
+                    </div>
+
+                    <!-- AWARDED Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-yellow-50 px-6 py-4 border-b border-yellow-100 flex justify-between items-center">
+                            <h3 class="font-bold text-yellow-900 flex items-center">
+                                <i class="fas fa-trophy mr-2"></i> AWARDED
+                                <span class="ml-2 bg-yellow-200 text-yellow-800 text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId && t.status === 'AWARDED').length}</span>
+                            </h3>
+                        </div>
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${renderTendersByStatus(regionId, 'AWARDED')}
+                        </div>
+                    </div>
+
+                    <!-- NOT WON Section -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
+                            <h3 class="font-bold text-red-900 flex items-center">
+                                <i class="fas fa-times-circle mr-2"></i> NOT WON
+                                <span class="ml-2 bg-red-200 text-red-800 text-xs px-2 py-1 rounded-full">${database.tenders.filter(t => t.regionId === regionId && t.status === 'NOT_WON').length}</span>
+                            </h3>
+                        </div>
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${renderTendersByStatus(regionId, 'NOT_WON')}
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function renderTenders(regionId) {
-            const tenders = database.tenders.filter(t => t.regionId === regionId);
+        function renderTendersByStatus(regionId, status) {
+            const tenders = database.tenders.filter(t => t.regionId === regionId && t.status === status);
+            
             if (tenders.length === 0) {
-                return `<div class="text-center py-8 text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No active tenders</p>
+                return `<div class="col-span-full text-center py-8 text-gray-400 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <i class="fas fa-inbox text-3xl mb-2"></i>
+                    <p class="text-sm">No tenders in this category</p>
                 </div>`;
             }
             
             return tenders.map(tender => {
-                const daysLeft = Math.ceil((new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24));
-                const priorityClass = tender.priority === 'High' ? 'priority-high' : tender.priority === 'Medium' ? 'priority-medium' : 'priority-low';
+                const daysLeft = tender.closingDate ? Math.ceil((new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                
+                let statusBadge = '';
+                let cardClass = '';
+                
+                switch(status) {
+                    case 'TO_PRICE':
+                        statusBadge = '<span class="status-to-price text-xs font-bold px-2 py-1 rounded">TO PRICE</span>';
+                        cardClass = 'border-l-4 border-blue-500';
+                        break;
+                    case 'PRICED':
+                        statusBadge = '<span class="status-priced text-xs font-bold px-2 py-1 rounded">PRICED</span>';
+                        cardClass = 'border-l-4 border-green-500';
+                        break;
+                    case 'NOT_PRICING':
+                        statusBadge = '<span class="status-not-pricing text-xs font-bold px-2 py-1 rounded">NOT PRICING</span>';
+                        cardClass = 'border-l-4 border-gray-400';
+                        break;
+                    case 'AWARDED':
+                        statusBadge = '<span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">AWARDED</span>';
+                        cardClass = 'border-l-4 border-yellow-500';
+                        break;
+                    case 'NOT_WON':
+                        statusBadge = '<span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">NOT WON</span>';
+                        cardClass = 'not-won-card';
+                        break;
+                }
+                
+                let extraInfo = '';
+                if (status === 'PRICED' && tender.ourPrice) {
+                    extraInfo = `<div class="text-sm text-green-700 font-semibold"><i class="fas fa-tag mr-1"></i> Our Price: ${tender.ourPrice}</div>`;
+                } else if (status === 'NOT_PRICING' && tender.notPricingReason) {
+                    extraInfo = `<div class="text-sm text-gray-600"><i class="fas fa-info-circle mr-1"></i> ${tender.notPricingReason}</div>`;
+                } else if (status === 'AWARDED' && tender.awardedValue) {
+                    extraInfo = `<div class="text-sm text-yellow-700 font-semibold"><i class="fas fa-trophy mr-1"></i> Won: ${tender.awardedValue}</div>`;
+                } else if (status === 'NOT_WON' && tender.winnerName) {
+                    extraInfo = `<div class="text-sm text-red-700"><i class="fas fa-building mr-1"></i> Winner: ${tender.winnerName}</div>
+                                 ${tender.winnerPrice ? `<div class="text-sm text-gray-600">Their price: ${tender.winnerPrice}</div>` : ''}`;
+                }
                 
                 return `
-                <div class="region-card rounded-xl p-5 shadow-sm card-hover ${priorityClass} cursor-pointer group" onclick="editEntry('tender', ${tender.id})">
+                <div class="bg-white rounded-lg p-4 shadow-sm ${cardClass} card-hover cursor-pointer" onclick="editTender(${tender.id})">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.category}</span>
-                        ${daysLeft <= 7 ? '<span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded animate-pulse">CLOSING SOON</span>' : ''}
+                        ${statusBadge}
+                        ${daysLeft && daysLeft <= 7 && daysLeft > 0 ? '<span class="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded animate-pulse">CLOSING SOON</span>' : ''}
                     </div>
-                    <h4 class="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#771414] transition-colors">${tender.title}</h4>
-                    <div class="space-y-2 text-sm text-gray-600">
-                        <div class="flex items-center"><i class="fas fa-dollar-sign w-5 text-gray-400"></i> ${tender.value}</div>
-                        <div class="flex items-center ${daysLeft <= 7 ? 'text-red-600 font-semibold' : ''}">
-                            <i class="fas fa-calendar w-5 text-gray-400"></i> ${formatDate(tender.closingDate)} (${daysLeft} days)
-                        </div>
+                    <h4 class="font-bold text-gray-900 mb-2 line-clamp-2">${tender.title}</h4>
+                    <div class="space-y-1 text-sm text-gray-600 mb-2">
+                        <div><i class="fas fa-dollar-sign w-4 text-gray-400"></i> ${tender.value || 'N/A'}</div>
+                        ${tender.closingDate ? `<div><i class="fas fa-calendar w-4 text-gray-400"></i> ${formatDate(tender.closingDate)} ${daysLeft ? `(${daysLeft} days)` : ''}</div>` : ''}
                     </div>
-                    <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                        <div class="flex items-center text-xs text-gray-500">
-                            <i class="fas fa-user w-4"></i> ${tender.contact.name}
-                        </div>
-                        <button class="text-[#771414] hover:text-[#5a1010] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                            Edit <i class="fas fa-arrow-right ml-1"></i>
-                        </button>
+                    ${extraInfo}
+                    <div class="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                        <i class="fas fa-user mr-1"></i> ${tender.contact?.name || 'No contact'}
                     </div>
                 </div>
                 `;
             }).join('');
         }
 
-        function renderAwarded(regionId) {
-            const awarded = database.awarded.filter(a => a.regionId === regionId);
-            if (awarded.length === 0) {
-                return `<div class="text-center py-8 text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-                    <i class="fas fa-clipboard-check text-4xl mb-2"></i>
-                    <p>No awarded works recorded</p>
-                </div>`;
-            }
-            
-            return awarded.map(item => `
-                <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 border-yellow-500 card-hover cursor-pointer" onclick="editEntry('awarded', ${item.id})">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-xs font-semibold px-2 py-1 rounded bg-yellow-50 text-yellow-700">Awarded</span>
-                        <span class="text-xs text-gray-500">${formatDate(item.awardedDate)}</span>
-                    </div>
-                    <h4 class="font-bold text-gray-900 mb-2">${item.title}</h4>
-                    <div class="space-y-2 text-sm text-gray-600 mb-3">
-                        <div class="flex items-center"><i class="fas fa-dollar-sign w-5 text-gray-400"></i> ${item.value}</div>
-                        <div class="flex items-center"><i class="fas fa-building w-5 text-gray-400"></i> ${item.awardedTo}</div>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-                        <span class="font-semibold">Contact:</span> ${item.contact.name} • ${item.contact.phone}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderContacts(regionId) {
-            const contacts = database.contacts.filter(c => c.regionId === regionId);
-            if (contacts.length === 0) {
-                return `<div class="text-center py-8 text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-                    <i class="fas fa-users text-4xl mb-2"></i>
-                    <p>No contacts added</p>
-                </div>`;
-            }
-            
-            return contacts.map(contact => `
-                <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 border-green-500 card-hover cursor-pointer" onclick="editEntry('contact', ${contact.id})">
-                    <div class="flex items-start space-x-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center text-green-700 font-bold text-lg flex-shrink-0">
-                            ${contact.name.charAt(0)}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-gray-900 truncate">${contact.name}</h4>
-                            <p class="text-sm text-gray-500">${contact.position}</p>
-                            <p class="text-xs text-gray-400 mt-1">${contact.department}</p>
-                        </div>
-                    </div>
-                    <div class="mt-3 space-y-1 text-sm">
-                        <a href="mailto:${contact.email}" class="flex items-center text-gray-600 hover:text-[#771414] transition-colors">
-                            <i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}
-                        </a>
-                        <a href="tel:${contact.phone}" class="flex items-center text-gray-600 hover:text-[#771414] transition-colors">
-                            <i class="fas fa-phone w-5 text-gray-400"></i> ${contact.phone}
-                        </a>
-                    </div>
-                    ${contact.notes ? `<p class="mt-2 text-xs text-gray-500 italic bg-gray-50 p-2 rounded">${contact.notes}</p>` : ''}
-                </div>
-            `).join('');
-        }
-
-        // ==================== CRUD OPERATIONS ====================
+        // ==================== TENDER MODAL FUNCTIONS ====================
         
-        function showAddModal(type) {
-            document.getElementById('modalTitle').textContent = type === 'tender' ? 'Add New Tender' : type === 'awarded' ? 'Add Awarded Work' : 'Add Local Contact';
-            document.getElementById('entryType').value = type;
-            document.getElementById('entryRegion').value = currentRegion;
-            document.getElementById('entryId').value = '';
-            document.getElementById('entryForm').reset();
+        function showAddTenderModal() {
+            document.getElementById('tenderModalTitle').textContent = 'Add New Tender';
+            document.getElementById('tenderId').value = '';
+            document.getElementById('tenderRegion').value = currentRegion;
+            document.getElementById('tenderForm').reset();
+            togglePricingFields();
+            document.getElementById('tenderModal').classList.remove('hidden');
+        }
+
+        function editTender(id) {
+            const tender = database.tenders.find(t => t.id === id);
+            if (!tender) return;
             
-            const valueField = document.getElementById('entryValue').parentElement;
-            const dateField = document.getElementById('entryDate').parentElement;
-            const priorityField = document.getElementById('entryPriority').parentElement;
+            document.getElementById('tenderModalTitle').textContent = 'Edit Tender';
+            document.getElementById('tenderId').value = id;
+            document.getElementById('tenderRegion').value = tender.regionId;
+            document.getElementById('tenderTitle').value = tender.title;
+            document.getElementById('tenderCategory').value = tender.category;
+            document.getElementById('tenderStatus').value = tender.status;
+            document.getElementById('tenderValue').value = tender.value;
+            document.getElementById('tenderClosingDate').value = tender.closingDate;
+            document.getElementById('tenderDescription').value = tender.description || '';
             
-            if (type === 'contact') {
-                valueField.style.display = 'none';
-                dateField.style.display = 'none';
-                priorityField.style.display = 'none';
-            } else {
-                valueField.style.display = 'block';
-                dateField.style.display = 'block';
-                priorityField.style.display = 'block';
+            // Contact
+            document.getElementById('tenderContactName').value = tender.contact?.name || '';
+            document.getElementById('tenderContactPosition').value = tender.contact?.position || '';
+            document.getElementById('tenderContactEmail').value = tender.contact?.email || '';
+            document.getElementById('tenderContactPhone').value = tender.contact?.phone || '';
+            
+            // Status-specific fields
+            if (tender.status === 'PRICED') {
+                document.getElementById('ourPrice').value = tender.ourPrice || '';
+                document.getElementById('submissionDate').value = tender.submissionDate || '';
+            } else if (tender.status === 'NOT_PRICING') {
+                document.getElementById('notPricingReason').value = tender.notPricingReason || '';
+                document.getElementById('notPricingComments').value = tender.notPricingComments || '';
+            } else if (tender.status === 'AWARDED') {
+                document.getElementById('awardedDate').value = tender.awardedDate || '';
+                document.getElementById('awardedValue').value = tender.awardedValue || '';
+                document.getElementById('awardedScope').value = tender.awardedScope || '';
+            } else if (tender.status === 'NOT_WON') {
+                document.getElementById('winnerName').value = tender.winnerName || '';
+                document.getElementById('winnerPrice').value = tender.winnerPrice || '';
+                document.getElementById('ourLosingPrice').value = tender.ourLosingPrice || '';
+                document.getElementById('resultDate').value = tender.resultDate || '';
+                document.getElementById('notWonComments').value = tender.notWonComments || '';
             }
             
-            document.getElementById('entryModal').classList.remove('hidden');
+            togglePricingFields();
+            document.getElementById('tenderModal').classList.remove('hidden');
         }
 
-        function editEntry(type, id) {
-            const item = database[type + 's'].find(x => x.id === id);
-            if (!item) return;
+        function togglePricingFields() {
+            const status = document.getElementById('tenderStatus').value;
             
-            showAddModal(type);
-            document.getElementById('modalTitle').textContent = 'Edit ' + (type === 'tender' ? 'Tender' : type === 'awarded' ? 'Awarded Work' : 'Contact');
-            document.getElementById('entryId').value = id;
+            document.getElementById('pricedFields').classList.add('hidden');
+            document.getElementById('notPricingFields').classList.add('hidden');
+            document.getElementById('awardedFields').classList.add('hidden');
+            document.getElementById('notWonFields').classList.add('hidden');
             
-            document.getElementById('entryTitle').value = item.title || item.name || '';
-            document.getElementById('entryCategory').value = item.category || item.department || 'Other';
-            document.getElementById('entryValue').value = item.value || '';
-            document.getElementById('entryDate').value = item.closingDate || item.awardedDate || '';
-            document.getElementById('entryPriority').value = item.priority || 'Medium';
-            document.getElementById('entryDescription').value = item.description || item.notes || '';
-            
-            const contact = item.contact || item;
-            document.getElementById('contactName').value = contact.name || '';
-            document.getElementById('contactPosition').value = contact.position || '';
-            document.getElementById('contactEmail').value = contact.email || '';
-            document.getElementById('contactPhone').value = contact.phone || '';
+            if (status === 'PRICED') {
+                document.getElementById('pricedFields').classList.remove('hidden');
+            } else if (status === 'NOT_PRICING') {
+                document.getElementById('notPricingFields').classList.remove('hidden');
+            } else if (status === 'AWARDED') {
+                document.getElementById('awardedFields').classList.remove('hidden');
+            } else if (status === 'NOT_WON') {
+                document.getElementById('notWonFields').classList.remove('hidden');
+            }
         }
 
-        function closeModal() {
-            document.getElementById('entryModal').classList.add('hidden');
+        function closeTenderModal() {
+            document.getElementById('tenderModal').classList.add('hidden');
         }
 
-        document.getElementById('entryForm').addEventListener('submit', async function(e) {
+        document.getElementById('tenderForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const type = document.getElementById('entryType').value;
-            const id = document.getElementById('entryId').value;
-            const regionId = document.getElementById('entryRegion').value;
+            const id = document.getElementById('tenderId').value;
+            const regionId = document.getElementById('tenderRegion').value;
+            const status = document.getElementById('tenderStatus').value;
             
-            const formData = {
-                title: document.getElementById('entryTitle').value,
-                category: document.getElementById('entryCategory').value,
-                value: document.getElementById('entryValue').value,
-                closingDate: document.getElementById('entryDate').value,
-                priority: document.getElementById('entryPriority').value,
-                description: document.getElementById('entryDescription').value,
+            const tenderData = {
+                title: document.getElementById('tenderTitle').value,
+                category: document.getElementById('tenderCategory').value,
+                status: status,
+                value: document.getElementById('tenderValue').value,
+                closingDate: document.getElementById('tenderClosingDate').value,
+                description: document.getElementById('tenderDescription').value,
                 contact: {
-                    name: document.getElementById('contactName').value,
-                    position: document.getElementById('contactPosition').value,
-                    email: document.getElementById('contactEmail').value,
-                    phone: document.getElementById('contactPhone').value
+                    name: document.getElementById('tenderContactName').value,
+                    position: document.getElementById('tenderContactPosition').value,
+                    email: document.getElementById('tenderContactEmail').value,
+                    phone: document.getElementById('tenderContactPhone').value
                 },
                 updatedAt: new Date().toISOString()
             };
             
-            if (type === 'contact') {
-                formData.name = formData.title;
-                formData.position = formData.contact.position;
-                formData.department = formData.category;
-                formData.email = formData.contact.email;
-                formData.phone = formData.contact.phone;
-                formData.notes = formData.description;
-                delete formData.title;
-                delete formData.contact;
+            // Add status-specific fields
+            if (status === 'PRICED') {
+                tenderData.ourPrice = document.getElementById('ourPrice').value;
+                tenderData.submissionDate = document.getElementById('submissionDate').value;
+            } else if (status === 'NOT_PRICING') {
+                tenderData.notPricingReason = document.getElementById('notPricingReason').value;
+                tenderData.notPricingComments = document.getElementById('notPricingComments').value;
+            } else if (status === 'AWARDED') {
+                tenderData.awardedDate = document.getElementById('awardedDate').value;
+                tenderData.awardedValue = document.getElementById('awardedValue').value;
+                tenderData.awardedScope = document.getElementById('awardedScope').value;
+            } else if (status === 'NOT_WON') {
+                tenderData.winnerName = document.getElementById('winnerName').value;
+                tenderData.winnerPrice = document.getElementById('winnerPrice').value;
+                tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
+                tenderData.resultDate = document.getElementById('resultDate').value;
+                tenderData.notWonComments = document.getElementById('notWonComments').value;
             }
             
             if (id) {
-                const index = database[type + 's'].findIndex(x => x.id == id);
+                const index = database.tenders.findIndex(t => t.id == id);
                 if (index !== -1) {
-                    database[type + 's'][index] = { ...database[type + 's'][index], ...formData };
+                    database.tenders[index] = { ...database.tenders[index], ...tenderData };
                 }
             } else {
-                const newId = Date.now();
-                database[type + 's'].push({
-                    id: newId,
-                    regionId: regionId,
-                    ...formData,
-                    createdAt: new Date().toISOString(),
-                    status: type === 'tender' ? 'Open' : undefined
-                });
+                tenderData.id = Date.now();
+                tenderData.regionId = regionId;
+                tenderData.createdAt = new Date().toISOString();
+                database.tenders.push(tenderData);
             }
             
-            // Save to appropriate storage
+            await saveData();
+            closeTenderModal();
+            loadRegion(currentRegion);
+            updateAllStats();
+            showToast('Tender saved successfully!', 'success');
+        });
+
+        // ==================== CRM FUNCTIONS ====================
+        
+        function populateCRMRegionSelect() {
+            const select = document.getElementById('crmRegion');
+            const filter = document.getElementById('crmRegionFilter');
+            
+            const options = qldRegions.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+            
+            if (select) select.innerHTML = '<option value="">Select Region...</option>' + options;
+            if (filter) filter.innerHTML = '<option value="all">All Regions</option>' + options;
+        }
+
+        function renderCRMContacts() {
+            const searchTerm = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
+            const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
+            
+            let contacts = database.crmContacts || [];
+            
+            if (searchTerm) {
+                contacts = contacts.filter(c => 
+                    c.name.toLowerCase().includes(searchTerm) ||
+                    c.position.toLowerCase().includes(searchTerm) ||
+                    c.department?.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (regionFilter !== 'all') {
+                contacts = contacts.filter(c => c.regionId === regionFilter);
+            }
+            
+            const container = document.getElementById('crmContactsList');
+            
+            if (contacts.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                    <i class="fas fa-address-book text-4xl mb-3"></i>
+                    <p>No contacts found. Add your first council contact!</p>
+                </div>`;
+                return;
+            }
+            
+            container.innerHTML = contacts.map(contact => {
+                const region = qldRegions.find(r => r.id === contact.regionId);
+                const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
+                
+                return `
+                <div class="crm-contact-card rounded-xl p-6 shadow-sm card-hover">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
+                                ${contact.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
+                                <p class="text-blue-600 font-medium">${contact.position}</p>
+                                <p class="text-sm text-gray-500">${region?.name}</p>
+                                <span class="inline-block mt-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">${contact.type}</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Add Interaction">
+                                <i class="fas fa-comment-plus"></i>
+                            </button>
+                            <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm mb-4">
+                        ${contact.department ? `<div class="text-gray-600"><i class="fas fa-building w-5 text-gray-400"></i> ${contact.department}</div>` : ''}
+                        <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
+                        ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
+                        ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
+                    </div>
+                    
+                    ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mb-4 italic">${contact.notes}</div>` : ''}
+                    
+                    ${interactions.length > 0 ? `
+                    <div class="border-t pt-4">
+                        <h5 class="font-semibold text-sm text-gray-700 mb-2">Recent Interactions</h5>
+                        <div class="interaction-timeline space-y-3">
+                            ${interactions.slice(-3).map((interaction, idx) => `
+                                <div class="relative pl-4">
+                                    <div class="timeline-dot" style="top: 4px;"></div>
+                                    <div class="text-xs text-gray-500">${formatDate(interaction.date)} • ${interaction.type}</div>
+                                    <div class="text-sm text-gray-700">${interaction.notes}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
+                    <div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
+                        <i class="fas fa-bell mr-2"></i>
+                        Follow-up due: ${formatDate(contact.followUpDate)}
+                    </div>
+                    ` : ''}
+                </div>
+                `;
+            }).join('');
+            
+            updateCRMStats();
+        }
+
+        function searchCRM() {
+            renderCRMContacts();
+        }
+
+        function filterCRMByRegion() {
+            renderCRMContacts();
+        }
+
+        function showAddCRMModal() {
+            document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
+            document.getElementById('crmContactId').value = '';
+            document.getElementById('crmForm').reset();
+            document.getElementById('crmModal').classList.remove('hidden');
+        }
+
+        function editCRMContact(id) {
+            const contact = database.crmContacts.find(c => c.id === id);
+            if (!contact) return;
+            
+            document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
+            document.getElementById('crmContactId').value = id;
+            document.getElementById('crmRegion').value = contact.regionId;
+            document.getElementById('crmType').value = contact.type;
+            document.getElementById('crmName').value = contact.name;
+            document.getElementById('crmPosition').value = contact.position;
+            document.getElementById('crmDepartment').value = contact.department || '';
+            document.getElementById('crmDirectPhone').value = contact.directPhone || '';
+            document.getElementById('crmMobile').value = contact.mobile || '';
+            document.getElementById('crmEmail').value = contact.email;
+            document.getElementById('crmLinkedIn').value = contact.linkedIn || '';
+            document.getElementById('crmNotes').value = contact.notes || '';
+            document.getElementById('crmLastContactDate').value = contact.lastContactDate || '';
+            document.getElementById('crmLastContactType').value = contact.lastContactType || '';
+            document.getElementById('crmLastContactNotes').value = contact.lastContactNotes || '';
+            document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
+            document.getElementById('crmPriority').value = contact.priority || 'Medium';
+            
+            document.getElementById('crmModal').classList.remove('hidden');
+        }
+
+        function closeCRMModal() {
+            document.getElementById('crmModal').classList.add('hidden');
+        }
+
+        document.getElementById('crmForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('crmContactId').value;
+            
+            const contactData = {
+                regionId: document.getElementById('crmRegion').value,
+                type: document.getElementById('crmType').value,
+                name: document.getElementById('crmName').value,
+                position: document.getElementById('crmPosition').value,
+                department: document.getElementById('crmDepartment').value,
+                directPhone: document.getElementById('crmDirectPhone').value,
+                mobile: document.getElementById('crmMobile').value,
+                email: document.getElementById('crmEmail').value,
+                linkedIn: document.getElementById('crmLinkedIn').value,
+                notes: document.getElementById('crmNotes').value,
+                lastContactDate: document.getElementById('crmLastContactDate').value,
+                lastContactType: document.getElementById('crmLastContactType').value,
+                lastContactNotes: document.getElementById('crmLastContactNotes').value,
+                followUpDate: document.getElementById('crmFollowUpDate').value,
+                priority: document.getElementById('crmPriority').value,
+                updatedAt: new Date().toISOString()
+            };
+            
+            if (id) {
+                const index = database.crmContacts.findIndex(c => c.id == id);
+                if (index !== -1) {
+                    contactData.id = parseInt(id);
+                    contactData.interactions = database.crmContacts[index].interactions || [];
+                    database.crmContacts[index] = contactData;
+                }
+            } else {
+                contactData.id = Date.now();
+                contactData.interactions = [];
+                database.crmContacts.push(contactData);
+            }
+            
+            await saveData();
+            closeCRMModal();
+            renderCRMContacts();
+            updateAllStats();
+            showToast('Contact saved successfully!', 'success');
+        });
+
+        // ==================== INTERACTION FUNCTIONS ====================
+        
+        function showAddInteractionModal(contactId) {
+            document.getElementById('interactionContactId').value = contactId;
+            document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('interactionForm').reset();
+            document.getElementById('interactionModal').classList.remove('hidden');
+        }
+
+        function closeInteractionModal() {
+            document.getElementById('interactionModal').classList.add('hidden');
+        }
+
+        document.getElementById('interactionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const contactId = parseInt(document.getElementById('interactionContactId').value);
+            
+            const interaction = {
+                id: Date.now(),
+                contactId: contactId,
+                date: document.getElementById('interactionDate').value,
+                type: document.getElementById('interactionType').value,
+                notes: document.getElementById('interactionNotes').value,
+                nextSteps: document.getElementById('interactionNextSteps').value,
+                createdAt: new Date().toISOString()
+            };
+            
+            if (!database.interactions) database.interactions = [];
+            database.interactions.push(interaction);
+            
+            // Update contact's last contact info
+            const contact = database.crmContacts.find(c => c.id === contactId);
+            if (contact) {
+                contact.lastContactDate = interaction.date;
+                contact.lastContactType = interaction.type;
+                contact.lastContactNotes = interaction.notes;
+            }
+            
+            await saveData();
+            closeInteractionModal();
+            renderCRMContacts();
+            showToast('Interaction added!', 'success');
+        });
+
+        // ==================== ANALYTICS FUNCTIONS ====================
+        
+        function renderAnalytics() {
+            const tenders = database.tenders || [];
+            
+            // Win rate stats
+            const priced = tenders.filter(t => t.status === 'PRICED' || t.status === 'AWARDED' || t.status === 'NOT_WON');
+            const won = tenders.filter(t => t.status === 'AWARDED');
+            const lost = tenders.filter(t => t.status === 'NOT_WON');
+            const winRate = priced.length > 0 ? ((won.length / priced.length) * 100).toFixed(1) : 0;
+            
+            document.getElementById('analyticsTotalPriced').textContent = priced.length;
+            document.getElementById('analyticsWon').textContent = won.length;
+            document.getElementById('analyticsLost').textContent = lost.length;
+            document.getElementById('analyticsWinRate').textContent = winRate + '%';
+            
+            // Pipeline values
+            const toPriceValue = sumValues(tenders.filter(t => t.status === 'TO_PRICE'));
+            const pricedValue = sumValues(tenders.filter(t => t.status === 'PRICED'));
+            const awardedValue = sumValues(tenders.filter(t => t.status === 'AWARDED'));
+            const totalPipeline = toPriceValue + pricedValue + awardedValue;
+            
+            document.getElementById('analyticsToPriceValue').textContent = formatCurrency(toPriceValue);
+            document.getElementById('analyticsPricedValue').textContent = formatCurrency(pricedValue);
+            document.getElementById('analyticsAwardedValue').textContent = formatCurrency(awardedValue);
+            document.getElementById('analyticsTotalPipeline').textContent = formatCurrency(totalPipeline);
+            
+            // Region performance
+            const regionStats = {};
+            tenders.forEach(t => {
+                if (!regionStats[t.regionId]) {
+                    regionStats[t.regionId] = { total: 0, won: 0, value: 0 };
+                }
+                regionStats[t.regionId].total++;
+                if (t.status === 'AWARDED') {
+                    regionStats[t.regionId].won++;
+                    regionStats[t.regionId].value += parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0;
+                }
+            });
+            
+            const sortedRegions = Object.entries(regionStats)
+                .sort((a, b) => b[1].value - a[1].value)
+                .slice(0, 10);
+            
+            document.getElementById('regionPerformanceList').innerHTML = sortedRegions.map(([regionId, stats]) => {
+                const region = qldRegions.find(r => r.id === regionId);
+                const winRate = stats.total > 0 ? ((stats.won / stats.total) * 100).toFixed(0) : 0;
+                return `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-[#771414] bg-opacity-10 text-[#771414] flex items-center justify-center font-bold">
+                            ${winRate}%
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-900">${region?.name}</div>
+                            <div class="text-sm text-gray-500">${stats.won}/${stats.total} won</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-gray-900">${formatCurrency(stats.value)}</div>
+                        <div class="text-sm text-gray-500">awarded</div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        async function saveData() {
             if (isDemoMode) {
-                // Save to localStorage for demo mode
                 try {
-                    localStorage.setItem('qldBusinessData_demo', JSON.stringify(database));
-                    showToast('Saved to Demo Mode (browser storage)', 'success');
+                    localStorage.setItem('qldBusinessData_demo_v2', JSON.stringify(database));
                 } catch (e) {
                     showToast('Error saving: Storage may be full', 'error');
                 }
             } else if (db && currentUser) {
                 try {
                     await db.collection('users').doc(currentUser.uid).set(database);
-                    showToast('Saved successfully!', 'success');
                 } catch (err) {
                     showToast('Error saving: ' + err.message, 'error');
-                    return;
+                    throw err;
                 }
-            } else {
-                showToast('Saved locally', 'info');
             }
-            
-            closeModal();
-            loadRegion(currentRegion);
-            updateStats();
-        });
+        }
 
-        // ==================== STATS & UTILITIES ====================
-        
-        function updateStats() {
-            const activeTenders = database.tenders.filter(t => t.status === 'Open').length;
-            const closingSoon = database.tenders.filter(t => {
-                const days = Math.ceil((new Date(t.closingDate) - new Date()) / (1000 * 60 * 60 * 24));
-                return days <= 7 && days >= 0;
-            }).length;
+        function updateAllStats() {
+            // Tender stats
+            const toPrice = database.tenders.filter(t => t.status === 'TO_PRICE').length;
+            const priced = database.tenders.filter(t => t.status === 'PRICED').length;
+            const notPricing = database.tenders.filter(t => t.status === 'NOT_PRICING').length;
+            const awarded = database.tenders.filter(t => t.status === 'AWARDED').length;
+            const notWon = database.tenders.filter(t => t.status === 'NOT_WON').length;
             
-            document.getElementById('statActiveTenders').textContent = activeTenders;
-            document.getElementById('statClosing').textContent = closingSoon;
-            document.getElementById('statAwarded').textContent = database.awarded.length;
-            document.getElementById('statContacts').textContent = database.contacts.length;
+            document.getElementById('statToPrice').textContent = toPrice;
+            document.getElementById('statPriced').textContent = priced;
+            document.getElementById('statNotPricing').textContent = notPricing;
+            document.getElementById('statAwarded').textContent = awarded;
+            document.getElementById('statNotWon').textContent = notWon;
             
-            const activeRegions = new Set([
-                ...database.tenders.map(t => t.regionId),
-                ...database.awarded.map(a => a.regionId),
-                ...database.contacts.map(c => c.regionId)
-            ]);
-            document.getElementById('statRegions').textContent = activeRegions.size;
+            const totalAwarded = database.tenders
+                .filter(t => t.status === 'AWARDED')
+                .reduce((sum, t) => sum + (parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0), 0);
+            document.getElementById('statTotalValue').textContent = formatCurrency(totalAwarded);
             
-            const totalValue = database.awarded.reduce((sum, item) => {
-                const val = parseFloat(item.value.replace(/[^0-9.]/g, ''));
-                return sum + (isNaN(val) ? 0 : val);
+            // CRM stats
+            updateCRMStats();
+        }
+
+        function updateCRMStats() {
+            const contacts = database.crmContacts || [];
+            const interactions = database.interactions || [];
+            
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const recentInteractions = interactions.filter(i => new Date(i.date) >= thirtyDaysAgo).length;
+            const followupsDue = contacts.filter(c => c.followUpDate && new Date(c.followUpDate) <= new Date()).length;
+            
+            document.getElementById('crmTotalContacts').textContent = contacts.length;
+            document.getElementById('crmActiveContacts').textContent = contacts.filter(c => c.lastContactDate && new Date(c.lastContactDate) >= thirtyDaysAgo).length;
+            document.getElementById('crmRecentInteractions').textContent = recentInteractions;
+            document.getElementById('crmFollowups').textContent = followupsDue;
+        }
+
+        function sumValues(tenders) {
+            return tenders.reduce((sum, t) => {
+                const val = parseFloat(t.value?.replace(/[^0-9.]/g, '')) || 0;
+                return sum + val;
             }, 0);
-            document.getElementById('statTotalValue').textContent = '$' + (totalValue / 1000000).toFixed(1) + 'M';
+        }
+
+        function formatCurrency(value) {
+            if (value >= 1000000) {
+                return '$' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '$' + value;
         }
 
         function updateSyncStatus(status) {
@@ -1239,74 +2120,74 @@ const firebaseConfig = {
         function globalSearch() {
             const query = document.getElementById('globalSearch').value.toLowerCase();
             if (!query) {
-                loadRegion(currentRegion);
+                if (currentMainTab === 'tenders') loadRegion(currentRegion);
+                else if (currentMainTab === 'crm') renderCRMContacts();
                 return;
             }
             
+            // Search across tenders
             const filteredTenders = database.tenders.filter(t => 
                 t.title.toLowerCase().includes(query) || 
                 t.category.toLowerCase().includes(query) ||
-                t.contact.name.toLowerCase().includes(query)
+                t.contact?.name.toLowerCase().includes(query)
             );
             
-            document.getElementById('regionContent').innerHTML = `
-                <div class="glass-panel rounded-2xl p-6 mb-6">
-                    <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
-                    <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders across all 77 LGAs</p>
-                    <button onclick="loadRegion('${currentRegion}')" class="text-[#771414] hover:underline mb-4">
-                        <i class="fas fa-arrow-left mr-1"></i> Back to region view
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    ${filteredTenders.map(tender => {
-                        const region = qldRegions.find(r => r.id === tender.regionId);
-                        const daysLeft = Math.ceil((new Date(tender.closingDate) - new Date()) / (1000 * 60 * 60 * 24));
-                        return `
-                        <div class="region-card rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editEntry('tender', ${tender.id}), 100)">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="text-xs font-semibold px-2 py-1 rounded bg-[#771414] bg-opacity-10 text-[#771414]">${region.name}</span>
-                                <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.category}</span>
-                            </div>
-                            <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
-                            <div class="text-sm text-gray-600">${tender.value} • ${daysLeft} days left</div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            `;
+            if (currentMainTab === 'tenders') {
+                document.getElementById('regionContent').innerHTML = `
+                    <div class="glass-panel rounded-2xl p-6 mb-6">
+                        <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
+                        <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders</p>
+                        <button onclick="loadRegion('${currentRegion}')" class="text-[#771414] hover:underline mb-4">
+                            <i class="fas fa-arrow-left mr-1"></i> Back to region view
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${filteredTenders.map(tender => {
+                            const region = qldRegions.find(r => r.id === tender.regionId);
+                            return `
+                            <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editTender(${tender.id}), 100)">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-[#771414] bg-opacity-10 text-[#771414]">${region?.name}</span>
+                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.status}</span>
+                                </div>
+                                <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
+                                <div class="text-sm text-gray-600">${tender.value}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
+            }
         }
 
         function exportToExcel() {
-            let csv = 'Type,Region,Zone,Title,Category,Value,Date,Priority,Contact Name,Contact Email,Contact Phone,Description\n';
+            let csv = 'Type,Region,Title,Category,Status,Value,Closing Date,Contact Name,Contact Email,Contact Phone,Description\n';
             
             database.tenders.forEach(t => {
                 const region = qldRegions.find(r => r.id === t.regionId);
-                csv += `Tender,${region.name},${region.zone},"${t.title}","${t.category}","${t.value}","${t.closingDate}","${t.priority}","${t.contact.name}","${t.contact.email}","${t.contact.phone}","${t.description}"\n`;
+                csv += `Tender,${region?.name},"${t.title}","${t.category}","${t.status}","${t.value}","${t.closingDate}","${t.contact?.name}","${t.contact?.email}","${t.contact?.phone}","${t.description}"\n`;
             });
             
-            database.awarded.forEach(a => {
-                const region = qldRegions.find(r => r.id === a.regionId);
-                csv += `Awarded,${region.name},${region.zone},"${a.title}","${a.category}","${a.value}","${a.awardedDate}","","${a.contact.name}","${a.contact.email}","${a.contact.phone}","${a.description}"\n`;
-            });
-            
-            database.contacts.forEach(c => {
-                const region = qldRegions.find(r => r.id === c.regionId);
-                csv += `Contact,${region.name},${region.zone},"${c.name}","${c.department}","","","","${c.name}","${c.email}","${c.phone}","${c.notes}"\n`;
-            });
+            if (database.crmContacts) {
+                database.crmContacts.forEach(c => {
+                    const region = qldRegions.find(r => r.id === c.regionId);
+                    csv += `Contact,${region?.name},"${c.name}","${c.type}","${c.position}","${c.department}","${c.email}","${c.directPhone}","${c.mobile}","${c.notes}"\n`;
+                });
+            }
             
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `QLD_Business_Report_77_LGAs_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `QLD_Business_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             
-            showToast('Excel file downloaded with all 77 LGAs!', 'success');
+            showToast('Report exported successfully!', 'success');
         }
 
         function shareReport() {
             const shareData = {
-                title: 'QLD Business Development Report - 77 LGAs',
-                text: `Business Development Report covering all 77 Queensland LGAs - ${database.tenders.length} active tenders, ${database.awarded.length} awarded works`,
+                title: 'QLD Business Development & CRM Report',
+                text: `Managing ${database.tenders.length} tenders and ${database.crmContacts?.length || 0} contacts across 77 Queensland LGAs`,
                 url: window.location.href
             };
             
@@ -1315,6 +2196,14 @@ const firebaseConfig = {
             } else {
                 navigator.clipboard.writeText(window.location.href);
                 showToast('Link copied to clipboard!', 'success');
+            }
+        }
+
+        function quickAdd() {
+            if (currentMainTab === 'tenders') {
+                showAddTenderModal();
+            } else if (currentMainTab === 'crm') {
+                showAddCRMModal();
             }
         }
 
@@ -1350,9 +2239,15 @@ const firebaseConfig = {
             return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        // Close modal on outside click
-        document.getElementById('entryModal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
+        // Close modals on outside click
+        document.getElementById('tenderModal').addEventListener('click', function(e) {
+            if (e.target === this) closeTenderModal();
+        });
+        document.getElementById('crmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeCRMModal();
+        });
+        document.getElementById('interactionModal').addEventListener('click', function(e) {
+            if (e.target === this) closeInteractionModal();
         });
     </script>
 </body>
