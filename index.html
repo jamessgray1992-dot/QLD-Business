@@ -1485,7 +1485,61 @@ function signOutAndReset() {
         }
 
         async function signUp() {
-            const email = document.getElementById('authEmail').value;
+            // ADD THIS TO YOUR SIGN-UP FUNCTION (not in onAuthStateChanged)
+async function signUp(email, password) {
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // SEND VERIFICATION EMAIL IMMEDIATELY AFTER SIGN-UP
+        await user.sendEmailVerification();
+        console.log('Verification email sent to:', email);
+        
+        showToast('Account created! Please check your email to verify.', 'success');
+        
+        // Sign out immediately so they can't access until verified
+        await auth.signOut();
+        
+        // Show verification UI
+        document.getElementById('authForm').innerHTML = `
+            <div class="text-center">
+                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                <p class="text-gray-600 mb-4">We've sent a verification link to ${email}. Please check your inbox.</p>
+                <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                    Resend Email
+                </button>
+                <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Back to Login
+                </button>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Sign up error:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// RESEND FUNCTION (keep this separate)
+async function resendVerificationEmail(email) {
+    try {
+        // User must be signed in to resend
+        const user = auth.currentUser;
+        if (user && !user.emailVerified) {
+            await user.sendEmailVerification();
+            showToast('Verification email resent!', 'success');
+        } else {
+            showToast('Please sign in first to resend verification.', 'warning');
+        }
+    } catch (error) {
+        console.error('Resend error:', error);
+        showToast('Error resending email. Please try again later.', 'error');
+    }
+}
+const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
             
             if (!email || !password) {
