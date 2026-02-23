@@ -1483,22 +1483,38 @@ function signOutAndReset() {
                 setTimeout(enterDemoMode, 1000);
             }
         }
+async function signUp() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
 
-        async function signUp() {
-            // ADD THIS TO YOUR SIGN-UP FUNCTION (not in onAuthStateChanged)
-async function signUp(email, password) {
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    if (!auth) {
+        showToast('Cannot create account - Firebase not configured', 'error');
+        return;
+    }
+
     try {
+        // Create user
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        // SEND VERIFICATION EMAIL IMMEDIATELY AFTER SIGN-UP
+        // SEND VERIFICATION EMAIL IMMEDIATELY
         await user.sendEmailVerification();
         console.log('Verification email sent to:', email);
         
-        showToast('Account created! Please check your email to verify.', 'success');
-        
         // Sign out immediately so they can't access until verified
         await auth.signOut();
+        
+        showToast('Account created! Please verify your email.', 'success');
         
         // Show verification UI
         document.getElementById('authForm').innerHTML = `
@@ -1507,9 +1523,13 @@ async function signUp(email, password) {
                     <i class="fas fa-envelope"></i>
                 </div>
                 <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                <p class="text-gray-600 mb-4">We've sent a verification link to ${email}. Please check your inbox.</p>
-                <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>. Please check your inbox and click the link.</p>
+                <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account.</p>
+                <button onclick="resendVerificationEmailWrapper()" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
                     Resend Email
+                </button>
+                <button onclick="checkVerificationAndContinue()" class="w-full py-2 bg-green-600 text-white rounded-lg mb-2 hover:bg-green-700">
+                    I've Verified - Continue
                 </button>
                 <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
                     Back to Login
@@ -1523,71 +1543,29 @@ async function signUp(email, password) {
     }
 }
 
-// RESEND FUNCTION (keep this separate)
-async function resendVerificationEmail(email) {
+// WRAPPER for resend (handles the case where user is signed out)
+async function resendVerificationEmailWrapper() {
+    const email = document.getElementById('authEmail')?.value;
+    if (!email) {
+        showToast('Please enter your email again', 'warning');
+        return;
+    }
+    
     try {
-        // User must be signed in to resend
-        const user = auth.currentUser;
-        if (user && !user.emailVerified) {
-            await user.sendEmailVerification();
-            showToast('Verification email resent!', 'success');
-        } else {
-            showToast('Please sign in first to resend verification.', 'warning');
-        }
-    } catch (error) {
-        console.error('Resend error:', error);
-        showToast('Error resending email. Please try again later.', 'error');
+        // Try to sign in again briefly to resend (user knows password since they just created account)
+        const password = prompt('Please re-enter your password to resend verification:');
+        if (!password) return;
+        
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        await userCredential.user.sendEmailVerification();
+        await auth.signOut();
+        
+        showToast('Verification email resent!', 'success');
+    } catch (err) {
+        console.error('Resend error:', err);
+        showToast('Error: ' + err.message, 'error');
     }
 }
-const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            
-            if (!email || !password) {
-                showToast('Please enter email and password', 'error');
-                return;
-            }
-
-            if (password.length < 6) {
-                showToast('Password must be at least 6 characters', 'error');
-                return;
-            }
-
-            if (auth) {
-                try {
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    
-                    // Send verification email immediately
-                    await userCredential.user.sendEmailVerification();
-                    
-                    showToast('Account created! Please verify your email.', 'success');
-                    
-                    // Show verification waiting screen
-                    document.getElementById('authForm').innerHTML = `
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl mx-auto mb-4">
-                                <i class="fas fa-envelope-open-text"></i>
-                            </div>
-                            <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                            <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>.</p>
-                            <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account before you can access the system.</p>
-                            <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                                Resend Verification Email
-                            </button>
-                            <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                                Back to Login
-                            </button>
-                        </div>
-                    `;
-                    
-                } catch (error) {
-                    showToast(error.message, 'error');
-                }
-            } else {
-                showToast('Cannot create account - Firebase not configured', 'error');
-                setTimeout(enterDemoMode, 1000);
-            }
-        }
-
         function signOut() {
             if (isDemoMode) {
                 if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
