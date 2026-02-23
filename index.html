@@ -1404,26 +1404,21 @@ if (firebaseInitialized && auth) {
             `;
         }
 
-        async function resendVerificationEmail() {
-            const user = auth.currentUser;
-            if (!user) {
-                showToast('Session expired. Please sign in again.', 'error');
-                signOutAndReset();
-                return;
-            }
-            
-            try {
-                await user.sendEmailVerification();
-                showToast('Verification email resent! Check your inbox.', 'success');
-            } catch (err) {
-                console.error('Resend error:', err);
-                if (err.code === 'auth/too-many-requests') {
-                    showToast('Too many requests. Please wait a few minutes.', 'warning');
-                } else {
-                    showToast('Error: ' + err.message, 'error');
-                }
-}
+async function resendVerificationEmail() {
+    try {
+        // This version is used when user is still signed in (rare case)
+        const user = auth.currentUser;
+        if (user && !user.emailVerified) {
+            await user.sendEmailVerification();
+            showToast('Verification email resent!', 'success');
+        } else {
+            showToast('Please sign in first to resend verification.', 'warning');
         }
+    } catch (error) {
+        console.error('Resend error:', error);
+        showToast('Error resending email: ' + error.message, 'error');
+    }
+}
 async function checkVerificationAndContinue() {
     try {
         await auth.currentUser.reload();
@@ -2747,4 +2742,5 @@ async function resendVerificationEmailWrapper() {
         }
     </script>
 </body>
+
 </html>
