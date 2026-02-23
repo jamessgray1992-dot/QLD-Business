@@ -256,6 +256,8 @@
                 <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
                     <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
                 </button>
+
+<button onclick="emergencyAdminLogin()" style="display:none;" id="emergencyBtn">Emergency Admin</button>
                 
                 <p class="text-xs text-center text-gray-400 mt-4">
                     Demo mode stores data locally on your device. No account required.
@@ -1154,7 +1156,26 @@
 
         // ==================== AUTHENTICATION & DEMO MODE ====================
         
-        function enterDemoMode() {
+        // Add this function for emergency admin access
+function emergencyAdminLogin() {
+    currentUser = { 
+        email: 'james.s.gray1992@gmail.com', 
+        uid: 'admin-emergency-' + Date.now() 
+    };
+    isDemoMode = false;
+    isAdmin = true;
+    
+    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('userEmail').textContent = 'Admin (Emergency)';
+    document.getElementById('demoBadge').classList.add('hidden');
+    document.getElementById('adminButton').classList.remove('hidden');
+    
+    initializeApp();
+    showToast('Emergency admin access granted', 'warning');
+}
+
+function enterDemoMode() {
             isDemoMode = true;
             currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
             
