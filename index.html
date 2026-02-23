@@ -1456,25 +1456,39 @@ async function resendVerificationEmailWrapper() {
         showToast('Error: ' + err.message, 'error');
     }
 }
-        function signOut() {
-            if (isDemoMode) {
-                if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
-                    isDemoMode = false;
-                    currentUser = null;
-                    isAdmin = false;
-                    document.getElementById('adminButton').classList.add('hidden');
-                    document.getElementById('authModal').classList.remove('hidden');
-                    document.getElementById('mainApp').classList.add('hidden');
-                    document.getElementById('demoBadge').classList.add('hidden');
-                    resetAuthForm();
-                }
-            } else if (auth) {
-                auth.signOut();
+function signOut() {
+    // Immediate UI feedback - hide modal first to prevent blocking
+    document.getElementById('authModal').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    
+    // Use setTimeout to yield control and prevent INP blocking
+    setTimeout(async () => {
+        if (isDemoMode) {
+            if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
+                isDemoMode = false;
+                currentUser = null;
+                isAdmin = false;
+                document.getElementById('adminButton').classList.add('hidden');
+                document.getElementById('demoBadge').classList.add('hidden');
+                resetAuthForm();
+            } else {
+                // User cancelled, restore UI
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+            }
+        } else if (auth) {
+            try {
+                await auth.signOut();
                 isAdmin = false;
                 document.getElementById('adminButton').classList.add('hidden');
                 resetAuthForm();
+            } catch (err) {
+                console.error('Sign out error:', err);
+                showToast('Error signing out', 'error');
             }
         }
+    }, 0);
+}
 
         function setupRealtimeSync() {
             const userDoc = db.collection('users').doc(currentUser.uid);
@@ -1985,98 +1999,101 @@ function resetAuthForm() {
             if (filter) filter.innerHTML = '<option value="all">All Regions</option>' + options;
         }
 
-        function renderCRMContacts() {
-            const searchTerm = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
-            const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
-            
-            let contacts = database.crmContacts || [];
-            
-            if (searchTerm) {
-                contacts = contacts.filter(c => 
-                    c.name.toLowerCase().includes(searchTerm) ||
-                    c.position.toLowerCase().includes(searchTerm) ||
-                    c.department?.toLowerCase().includes(searchTerm)
-                );
-            }
-            
-            if (regionFilter !== 'all') {
-                contacts = contacts.filter(c => c.regionId === regionFilter);
-            }
-            
-            const container = document.getElementById('crmContactsList');
-            
-            if (contacts.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                    <i class="fas fa-address-book text-4xl mb-3"></i>
-                    <p>No contacts found. Add your first council contact!</p>
-                </div>`;
-                return;
-            }
-            
-            container.innerHTML = contacts.map(contact => {
-                const region = qldRegions.find(r => r.id === contact.regionId);
-                const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
-                
-                return `
-                <div class="crm-contact-card rounded-xl p-6 shadow-sm card-hover">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
-                                ${contact.name.charAt(0)}
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
-                                <p class="text-blue-600 font-medium">${contact.position}</p>
-                                <p class="text-sm text-gray-500">${region?.name}</p>
-                                <span class="inline-block mt-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">${contact.type}</span>
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Add Interaction">
-                                <i class="fas fa-comment-plus"></i>
-                            </button>
-                            <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
+function renderCRMContacts() {
+    const searchTerm = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
+    const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
+    
+    let contacts = database.crmContacts || [];
+    
+    if (searchTerm) {
+        contacts = contacts.filter(c => 
+            c.name.toLowerCase().includes(searchTerm) ||
+            c.position.toLowerCase().includes(searchTerm) ||
+            c.department?.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (regionFilter !== 'all') {
+        contacts = contacts.filter(c => c.regionId === regionFilter);
+    }
+    
+    const container = document.getElementById('crmContactsList');
+    
+    if (contacts.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <i class="fas fa-address-book text-4xl mb-3"></i>
+            <p>No contacts found. Add your first council contact!</p>
+        </div>`;
+        return;
+    }
+    
+    container.innerHTML = contacts.map(contact => {
+        const region = qldRegions.find(r => r.id === contact.regionId);
+        const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
+        
+        return `
+        <div class="crm-contact-card rounded-xl p-6 shadow-sm card-hover">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-start space-x-3">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
+                        ${contact.name.charAt(0)}
                     </div>
-                    
-                    <div class="space-y-2 text-sm mb-4">
-                        ${contact.department ? `<div class="text-gray-600"><i class="fas fa-building w-5 text-gray-400"></i> ${contact.department}</div>` : ''}
-                        <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
-                        ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
-                        ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
+                    <div>
+                        <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
+                        <p class="text-blue-600 font-medium">${contact.position}</p>
+                        <p class="text-sm text-gray-500">${region?.name}</p>
+                        <span class="inline-block mt-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">${contact.type}</span>
                     </div>
-                    
-                    ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mb-4 italic">${contact.notes}</div>` : ''}
-                    
-                    ${interactions.length > 0 ? `
-                    <div class="border-t pt-4">
-                        <h5 class="font-semibold text-sm text-gray-700 mb-2">Recent Interactions</h5>
-                        <div class="interaction-timeline space-y-3">
-                            ${interactions.slice(-3).map((interaction, idx) => `
-                                <div class="relative pl-4">
-                                    <div class="timeline-dot" style="top: 4px;"></div>
-                                    <div class="text-xs text-gray-500">${formatDate(interaction.date)} • ${interaction.type}</div>
-                                    <div class="text-sm text-gray-700">${interaction.notes}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
-                    <div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
-                        <i class="fas fa-bell mr-2"></i>
-                        Follow-up due: ${formatDate(contact.followUpDate)}
-                    </div>
-                    ` : ''}
                 </div>
-                `;
-            }).join('');
+                <div class="flex space-x-2">
+                    <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Add Interaction">
+                        <i class="fas fa-comment-plus"></i>
+                    </button>
+                    <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteCRMContact(${contact.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
             
-            updateCRMStats();
-        }
+            <div class="space-y-2 text-sm mb-4">
+                ${contact.department ? `<div class="text-gray-600"><i class="fas fa-building w-5 text-gray-400"></i> ${contact.department}</div>` : ''}
+                <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
+                ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
+                ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
+            </div>
+            
+            ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 mb-4 italic">${contact.notes}</div>` : ''}
+            
+            ${interactions.length > 0 ? `
+            <div class="border-t pt-4">
+                <h5 class="font-semibold text-sm text-gray-700 mb-2">Recent Interactions</h5>
+                <div class="interaction-timeline space-y-3">
+                    ${interactions.slice(-3).map((interaction, idx) => `
+                        <div class="relative pl-4">
+                            <div class="timeline-dot" style="top: 4px;"></div>
+                            <div class="text-xs text-gray-500">${formatDate(interaction.date)} • ${interaction.type}</div>
+                            <div class="text-sm text-gray-700">${interaction.notes}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
+            <div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
+                <i class="fas fa-bell mr-2"></i>
+                Follow-up due: ${formatDate(contact.followUpDate)}
+            </div>
+            ` : ''}
+        </div>
+        `;
+    }).join('');
+    
+    updateCRMStats();
+}
 
         function searchCRM() {
             renderCRMContacts();
@@ -2117,7 +2134,39 @@ function resetAuthForm() {
             
             document.getElementById('crmModal').classList.remove('hidden');
         }
-
+async function deleteCRMContact(id) {
+    // Find the contact to show name in confirmation
+    const contact = database.crmContacts.find(c => c.id === id);
+    if (!contact) return;
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete ${contact.name}?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        // Remove contact from array
+        database.crmContacts = database.crmContacts.filter(c => c.id !== id);
+        
+        // Also remove any interactions associated with this contact
+        if (database.interactions) {
+            database.interactions = database.interactions.filter(i => i.contactId !== id);
+        }
+        
+        // Save to database/localStorage
+        await saveData();
+        
+        // Refresh the display
+        renderCRMContacts();
+        updateAllStats();
+        
+        showToast('Contact deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting contact:', error);
+        showToast('Error deleting contact: ' + error.message, 'error');
+    }
+}
         function closeCRMModal() {
             document.getElementById('crmModal').classList.add('hidden');
         }
@@ -2670,6 +2719,7 @@ function resetAuthForm() {
 </body>
 
 </html>
+
 
 
 
