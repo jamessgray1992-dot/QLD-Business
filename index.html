@@ -1250,13 +1250,14 @@ function enterDemoMode() {
             });
         }
 
-       // Auth state observer
 // Auth state observer
 if (firebaseInitialized && auth) {
     auth.onAuthStateChanged(async user => {
         console.log('Auth state changed:', user ? user.email : 'null');
         
         if (user) {
+            console.log('User email verified:', user.emailVerified);
+            
             // Check if email is verified
             if (!user.emailVerified) {
                 showToast('Please verify your email before continuing. Check your inbox.', 'warning');
@@ -1270,51 +1271,35 @@ if (firebaseInitialized && auth) {
                         </div>
                         <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
                         <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
-                        <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                        <button onclick="resendVerificationEmailWrapper()" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
                             Resend Email
                         </button>
-                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        <button onclick="checkVerificationAndContinue()" class="w-full py-2 bg-green-600 text-white rounded-lg mb-2 hover:bg-green-700">
                             I've Verified - Continue
+                        </button>
+                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Back to Login
                         </button>
                     </div>
                 `;
                 return;
             }
             
-            // BYPASS APPROVAL FOR ADMIN EMAIL
-            if (user.email === "james.s.gray1992@gmail.com") {
-                console.log('Admin user detected, bypassing approval check');
-                
-                // Auto-approve admin in the database
-                try {
-                    await db.collection('approvedUsers').doc(user.uid).set({
-                        email: user.email,
-                        approved: true,
-                        approvedAt: new Date().toISOString(),
-                        approvedBy: 'system'
-                    });
-                } catch (e) {
-                    console.log('Could not write approval doc, continuing anyway:', e);
+            // Email is verified - now check approval
+            try {
+                // BYPASS APPROVAL FOR ADMIN EMAIL
+                if (user.email === "james.s.gray1992@gmail.com") {
+                    console.log('Admin user detected, granting access');
+                    await grantAccess(user);
+                    return;
                 }
                 
-                // Grant access immediately
-                currentUser = user;
-                isDemoMode = false;
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('demoBadge').classList.add('hidden');
-                
-                await initializeApp();
-                showToast('Welcome Admin!', 'success');
-                return;
-            }
-            
-            // For non-admin users, check approval
-            try {
+                // For non-admin users, check approval
+                console.log('Checking approval for:', user.uid);
                 const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
                 
                 if (!approvalDoc.exists || !approvalDoc.data().approved) {
+                    console.log('User not approved, showing pending screen');
                     showToast('Your account is pending admin approval.', 'warning');
                     await auth.signOut();
                     
@@ -1336,31 +1321,27 @@ if (firebaseInitialized && auth) {
                         </div>
                     `;
                     
-                    // Create approval request
-                    await db.collection('approvalRequests').doc(user.uid).set({
-                        email: user.email,
-                        requestedAt: new Date().toISOString(),
-                        status: 'pending',
-                        uid: user.uid
-                    });
+                    // Create approval request (only if not exists)
+                    const requestDoc = await db.collection('approvalRequests').doc(user.uid).get();
+                    if (!requestDoc.exists) {
+                        await db.collection('approvalRequests').doc(user.uid).set({
+                            email: user.email,
+                            requestedAt: new Date().toISOString(),
+                            status: 'pending',
+                            uid: user.uid
+                        });
+                    }
                     
                     return;
                 }
                 
                 // User is approved - grant access
-                currentUser = user;
-                isDemoMode = false;
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('demoBadge').classList.add('hidden');
-                
-                await initializeApp();
-                showToast('Welcome! Account approved.', 'success');
+                console.log('User approved, granting access');
+                await grantAccess(user);
                 
             } catch (err) {
                 console.error("Approval check failed:", err);
-                showToast('Error checking approval status.', 'error');
+                showToast('Error checking approval status: ' + err.message, 'error');
                 await auth.signOut();
             }
             
@@ -1370,6 +1351,28 @@ if (firebaseInitialized && auth) {
             document.getElementById('mainApp').classList.add('hidden');
         }
     });
+}
+
+// Helper function to grant access (reduces code duplication)
+async function grantAccess(user) {
+    currentUser = user;
+    isDemoMode = false;
+    
+    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('userEmail').textContent = user.email;
+    document.getElementById('demoBadge').classList.add('hidden');
+    
+    // Check if admin and show button
+    if (user.email === "james.s.gray1992@gmail.com") {
+        document.getElementById('adminButton').classList.remove('hidden');
+        showToast('Welcome Admin!', 'success');
+    } else {
+        document.getElementById('adminButton').classList.add('hidden');
+        showToast('Welcome! Account approved.', 'success');
+    }
+    
+    await initializeApp();
 }
 
         function resetAuthForm() {
@@ -1421,19 +1424,24 @@ async function resendVerificationEmail() {
 }
 async function checkVerificationAndContinue() {
     try {
+        // Reload user to get latest emailVerified status
         await auth.currentUser.reload();
         const refreshedUser = auth.currentUser;
         
+        console.log('Checking verification status:', refreshedUser.emailVerified);
+        
         if (refreshedUser.emailVerified) {
-            showToast('Email verified! Continuing...', 'success');
+            showToast('Email verified! Reloading...', 'success');
+            // Force reload to trigger onAuthStateChanged again
             setTimeout(() => {
                 location.reload();
             }, 1000);
         } else {
-            showToast('Email not yet verified. Please check your inbox and click the link.', 'warning');
+            showToast('Email not yet verified. Please check your inbox and click the verification link.', 'warning');
         }
     } catch (err) {
-        showToast('Error checking verification status', 'error');
+        console.error('Check verification error:', err);
+        showToast('Error checking verification status. Please try signing in again.', 'error');
     }
 }
 
@@ -1445,6 +1453,30 @@ function signOutAndReset() {
     });
 }
 
+        // Add this temporary function for testing
+async function emergencyBypass() {
+    if (confirm('EMERGENCY: Bypass all checks?')) {
+        const email = prompt('Enter your email:');
+        if (email) {
+            currentUser = { 
+                email: email, 
+                uid: 'emergency-' + Date.now(),
+                emailVerified: true 
+            };
+            isDemoMode = false;
+            
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = email + ' (Emergency)';
+            document.getElementById('demoBadge').classList.add('hidden');
+            
+            await initializeApp();
+            showToast('Emergency access granted', 'warning');
+        }
+    }
+}
+
+// Add hidden button or call from console: emergencyBypass()
         async function checkApprovalStatus(uid) {
             try {
                 const doc = await db.collection('approvedUsers').doc(uid).get();
@@ -2744,3 +2776,4 @@ async function resendVerificationEmailWrapper() {
 </body>
 
 </html>
+
