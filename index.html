@@ -1251,50 +1251,23 @@ function enterDemoMode() {
         }
 
 // Auth state observer
+if (firebaseInitia// Auth state observer
 if (firebaseInitialized && auth) {
     auth.onAuthStateChanged(async user => {
         console.log('Auth state changed:', user ? user.email : 'null');
         
         if (user) {
-            console.log('User email verified:', user.emailVerified);
+            console.log('User signed in:', user.email);
             
-            // Check if email is verified
-            if (!user.emailVerified) {
-                showToast('Please verify your email before continuing. Check your inbox.', 'warning');
-                await auth.signOut();
-                
-                // Show verification message
-                document.getElementById('authForm').innerHTML = `
-                    <div class="text-center">
-                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                        <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
-                        <button onclick="resendVerificationEmailWrapper()" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                            Resend Email
-                        </button>
-                        <button onclick="checkVerificationAndContinue()" class="w-full py-2 bg-green-600 text-white rounded-lg mb-2 hover:bg-green-700">
-                            I've Verified - Continue
-                        </button>
-                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            Back to Login
-                        </button>
-                    </div>
-                `;
+            // BYPASS APPROVAL FOR ADMIN EMAIL
+            if (user.email === "james.s.gray1992@gmail.com") {
+                console.log('Admin user detected, granting access');
+                await grantAccess(user);
                 return;
             }
             
-            // Email is verified - now check approval
+            // For non-admin users, check approval only
             try {
-                // BYPASS APPROVAL FOR ADMIN EMAIL
-                if (user.email === "james.s.gray1992@gmail.com") {
-                    console.log('Admin user detected, granting access');
-                    await grantAccess(user);
-                    return;
-                }
-                
-                // For non-admin users, check approval
                 console.log('Checking approval for:', user.uid);
                 const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
                 
@@ -1310,7 +1283,7 @@ if (firebaseInitialized && auth) {
                                 <i class="fas fa-clock"></i>
                             </div>
                             <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
-                            <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account.</p>
+                            <p class="text-gray-600 mb-4">An administrator must approve your account before you can access the system.</p>
                             <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
                             <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
                                 Check Status
@@ -1375,38 +1348,37 @@ async function grantAccess(user) {
     await initializeApp();
 }
 
-        function resetAuthForm() {
-            document.getElementById('authForm').innerHTML = `
-                <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
-                <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
-                
-                <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
-                    Sign In
-                </button>
-                
-                <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
-                    Create Account
-                </button>
-                
-                <div class="relative mb-4">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">or</span>
-                    </div>
-                </div>
-                
-                <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
-                    <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
-                </button>
-                
-                <p class="text-xs text-center text-gray-400 mt-4">
-                    Demo mode stores data locally on your device. No account required.
-                </p>
-            `;
-        }
-
+function resetAuthForm() {
+    document.getElementById('authForm').innerHTML = `
+        <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
+        <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
+        
+        <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
+            Sign In
+        </button>
+        
+        <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
+            Create Account
+        </button>
+        
+        <div class="relative mb-4">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white text-gray-500">or</span>
+            </div>
+        </div>
+        
+        <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
+            <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
+        </button>
+        
+        <p class="text-xs text-center text-gray-400 mt-4">
+            Demo mode stores data locally on your device. No account required.
+        </p>
+    `;
+}
 async function resendVerificationEmail() {
     try {
         // This version is used when user is still signed in (rare case)
@@ -1530,46 +1502,45 @@ async function signUp() {
     }
 
     try {
-        // Create user
+        // Create user - NO VERIFICATION EMAIL SENT
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        // SEND VERIFICATION EMAIL IMMEDIATELY
-        await user.sendEmailVerification();
-        console.log('Verification email sent to:', email);
+        console.log('User created:', email);
         
-        // Sign out immediately so they can't access until verified
+        // Show pending approval message immediately
+        showToast('Account created! Pending admin approval.', 'success');
         await auth.signOut();
         
-        showToast('Account created! Please verify your email.', 'success');
-        
-        // Show verification UI
+        // Show pending approval UI
         document.getElementById('authForm').innerHTML = `
             <div class="text-center">
-                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
-                    <i class="fas fa-envelope"></i>
+                <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
+                    <i class="fas fa-clock"></i>
                 </div>
-                <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>. Please check your inbox and click the link.</p>
-                <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account.</p>
-                <button onclick="resendVerificationEmailWrapper()" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                    Resend Email
-                </button>
-                <button onclick="checkVerificationAndContinue()" class="w-full py-2 bg-green-600 text-white rounded-lg mb-2 hover:bg-green-700">
-                    I've Verified - Continue
-                </button>
-                <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                <h3 class="text-lg font-bold mb-2">Account Created</h3>
+                <p class="text-gray-600 mb-4">Your account has been created successfully!</p>
+                <p class="text-gray-600 mb-4">An administrator must approve your account before you can access the system.</p>
+                <p class="text-sm text-gray-500 mb-4">Email: <strong>${email}</strong></p>
+                <button onclick="location.reload()" class="w-full py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010]">
                     Back to Login
                 </button>
             </div>
         `;
+        
+        // Create approval request
+        await db.collection('approvalRequests').doc(user.uid).set({
+            email: user.email,
+            requestedAt: new Date().toISOString(),
+            status: 'pending',
+            uid: user.uid
+        });
         
     } catch (error) {
         console.error('Sign up error:', error);
         showToast(error.message, 'error');
     }
 }
-
 // WRAPPER for resend (handles the case where user is signed out)
 async function resendVerificationEmailWrapper() {
     const email = document.getElementById('authEmail')?.value;
@@ -2776,4 +2747,5 @@ async function resendVerificationEmailWrapper() {
 </body>
 
 </html>
+
 
