@@ -1230,98 +1230,125 @@
         }
 
         // Auth state observer - FIXED with await
-        if (firebaseInitialized && auth) {
-            auth.onAuthStateChanged(async user => {
-                console.log('Auth state changed:', user ? user.email : 'null');
+// Auth state observer
+if (firebaseInitialized && auth) {
+    auth.onAuthStateChanged(async user => {
+        console.log('Auth state changed:', user ? user.email : 'null');
+        
+        if (user) {
+            // Check if email is verified
+            if (!user.emailVerified) {
+                showToast('Please verify your email before continuing. Check your inbox.', 'warning');
+                await auth.signOut();
                 
-                if (user) {
-                    // Check if email is verified
-                    if (!user.emailVerified) {
-                        showToast('Please verify your email before continuing. Check your inbox.', 'warning');
-                        await auth.signOut();
-                        
-                        // Show verification message
-                        document.getElementById('authForm').innerHTML = `
-                            <div class="text-center">
-                                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
-                                    <i class="fas fa-envelope"></i>
-                                </div>
-                                <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                                <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
-                                <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                                    Resend Email
-                                </button>
-                                <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                                    I've Verified - Continue
-                                </button>
-                                <p class="text-xs text-gray-400 mt-4">Waiting for admin approval after verification...</p>
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    // Check if user is approved by admin
-                    try {
-                        const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
-                        
-                        if (!approvalDoc.exists || !approvalDoc.data().approved) {
-                            showToast('Your account is pending admin approval.', 'warning');
-                            await auth.signOut();
-                            
-                            // Show pending approval message
-                            document.getElementById('authForm').innerHTML = `
-                                <div class="text-center">
-                                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                    <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
-                                    <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account before you can access the system.</p>
-                                    <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
-                                    <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
-                                        Check Status
-                                    </button>
-                                    <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                                        Back to Login
-                                    </button>
-                                </div>
-                            `;
-                            
-                            // Create approval request in database
-                            await db.collection('approvalRequests').doc(user.uid).set({
-                                email: user.email,
-                                requestedAt: new Date().toISOString(),
-                                status: 'pending',
-                                uid: user.uid
-                            });
-                            
-                            return;
-                        }
-                        
-                        // User is verified and approved - grant access
-                        currentUser = user;
-                        isDemoMode = false;
-                        document.getElementById('authModal').classList.add('hidden');
-                        document.getElementById('mainApp').classList.remove('hidden');
-                        document.getElementById('userEmail').textContent = user.email;
-                        document.getElementById('demoBadge').classList.add('hidden');
-                        
-                        // FIXED: Added await here
-                        await initializeApp();
-                        showToast('Welcome! Account approved and verified.', 'success');
-                        
-                    } catch (err) {
-                        console.error("Approval check failed:", err);
-                        showToast('Error checking approval status. Please try again.', 'error');
-                        await auth.signOut();
-                    }
-                    
-                } else if (!isDemoMode) {
-                    // Reset auth form if not in demo mode
-                    resetAuthForm();
-                    document.getElementById('authModal').classList.remove('hidden');
-                    document.getElementById('mainApp').classList.add('hidden');
+                // Show verification message
+                document.getElementById('authForm').innerHTML = `
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                        <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
+                        <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                            Resend Email
+                        </button>
+                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            I've Verified - Continue
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // BYPASS APPROVAL FOR ADMIN EMAIL
+            if (user.email === "james.s.gray1992@gmail.com") {
+                console.log('Admin user detected, bypassing approval check');
+                
+                // Auto-approve admin in the database
+                try {
+                    await db.collection('approvedUsers').doc(user.uid).set({
+                        email: user.email,
+                        approved: true,
+                        approvedAt: new Date().toISOString(),
+                        approvedBy: 'system'
+                    });
+                } catch (e) {
+                    console.log('Could not write approval doc, continuing anyway:', e);
                 }
-            });
+                
+                // Grant access immediately
+                currentUser = user;
+                isDemoMode = false;
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('demoBadge').classList.add('hidden');
+                
+                await initializeApp();
+                showToast('Welcome Admin!', 'success');
+                return;
+            }
+            
+            // For non-admin users, check approval
+            try {
+                const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
+                
+                if (!approvalDoc.exists || !approvalDoc.data().approved) {
+                    showToast('Your account is pending admin approval.', 'warning');
+                    await auth.signOut();
+                    
+                    // Show pending approval message
+                    document.getElementById('authForm').innerHTML = `
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
+                            <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account.</p>
+                            <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
+                            <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
+                                Check Status
+                            </button>
+                            <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                Back to Login
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Create approval request
+                    await db.collection('approvalRequests').doc(user.uid).set({
+                        email: user.email,
+                        requestedAt: new Date().toISOString(),
+                        status: 'pending',
+                        uid: user.uid
+                    });
+                    
+                    return;
+                }
+                
+                // User is approved - grant access
+                currentUser = user;
+                isDemoMode = false;
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('demoBadge').classList.add('hidden');
+                
+                await initializeApp();
+                showToast('Welcome! Account approved.', 'success');
+                
+            } catch (err) {
+                console.error("Approval check failed:", err);
+                showToast('Error checking approval status.', 'error');
+                await auth.signOut();
+            }
+            
+        } else if (!isDemoMode) {
+            resetAuthForm();
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+    });
         } else {
             document.getElementById('authModal').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
