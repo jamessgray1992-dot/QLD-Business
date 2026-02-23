@@ -1212,43 +1212,53 @@ function enterDemoMode() {
             return isAdmin;
         }
 
-        // FIXED: Properly structured initializeApp function
-        async function initializeApp() {
-            console.log('Initializing app...');
-            
-            // Check if admin and show button FIRST
-            if (await checkIfAdmin()) {
-                console.log('Showing admin button');
-                document.getElementById('adminButton').classList.remove('hidden');
-            } else {
-                console.log('Hiding admin button');
-                document.getElementById('adminButton').classList.add('hidden');
+async function initializeApp() {
+    console.log('Initializing app with shared data...');
+    
+    // Check if admin
+    if (await checkIfAdmin()) {
+        document.getElementById('adminButton').classList.remove('hidden');
+    } else {
+        document.getElementById('adminButton').classList.add('hidden');
+    }
+    
+    renderRegionTabs();
+    populateCRMRegionSelect();
+    
+    if (!isDemoMode && db) {
+        // Setup real-time sync for shared data
+        setupRealtimeSync();
+    } else {
+        // Demo mode - load from localStorage or sample
+        const saved = localStorage.getItem('qldBusinessData_shared_demo');
+        if (saved) {
+            try {
+                database = JSON.parse(saved);
+            } catch (e) {
+                loadSampleData();
             }
-            
-            renderRegionTabs();
-            populateCRMRegionSelect();
-            
-            if (!isDemoMode && db && currentUser) {
-                setupRealtimeSync();
-            } else {
-                if (!isDemoMode) loadSampleData();
-                loadRegion(currentRegion);
-                updateAllStats();
-            }
-            
-            window.addEventListener('online', () => {
-                isOnline = true;
-                document.getElementById('offlineBanner').classList.remove('show');
-                showToast('Back online', 'success');
-                updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
-            });
-            
-            window.addEventListener('offline', () => {
-                isOnline = false;
-                document.getElementById('offlineBanner').classList.add('show');
-                updateSyncStatus('Offline');
-            });
+        } else {
+            loadSampleData();
         }
+        loadRegion(currentRegion);
+        updateAllStats();
+    }
+    
+    // Online/offline handlers
+    window.addEventListener('online', () => {
+        isOnline = true;
+        document.getElementById('offlineBanner').classList.remove('show');
+        showToast('Back online - syncing data', 'success');
+        updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
+        if (!isDemoMode) setupRealtimeSync();
+    });
+    
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        document.getElementById('offlineBanner').classList.add('show');
+        updateSyncStatus('Offline');
+    });
+}
 
 // Auth state observer
 if (firebaseInitialized && auth) {
@@ -1346,6 +1356,103 @@ async function grantAccess(user) {
     
     await initializeApp();
 }
+
+let sharedUnsubscribe = null;
+
+// Initialize shared data instead of user-specific data
+function setupRealtimeSync() {
+    // Unsubscribe from previous listener if exists
+    if (sharedUnsubscribe) {
+        sharedUnsubscribe();
+    }
+    
+    // Listen to shared data collection
+    const sharedDoc = db.collection('shared').doc('mainData');
+    
+    sharedUnsubscribe = sharedDoc.onSnapshot(doc => {
+        if (doc.exists) {
+            const data = doc.data();
+            database = {
+                tenders: data.tenders || [],
+                crmContacts: data.crmContacts || [],
+                interactions: data.interactions || [],
+                lastUpdated: data.lastUpdated || new Date().toISOString()
+            };
+            console.log('Shared data loaded:', database);
+        } else {
+            // Initialize empty shared data
+            sharedDoc.set({
+                tenders: [],
+                crmContacts: [],
+                interactions: [],
+                lastUpdated: new Date().toISOString()
+            });
+        }
+        
+        // Refresh UI
+        if (currentMainTab === 'tenders') loadRegion(currentRegion);
+        else if (currentMainTab === 'crm') renderCRMContacts();
+        else if (currentMainTab === 'analytics') renderAnalytics();
+        
+        updateAllStats();
+        updateSyncStatus('Synced');
+        
+    }, err => {
+        console.error("Shared sync error:", err);
+        updateSyncStatus('Error');
+        showToast('Sync error - working offline', 'warning');
+    });
+}
+
+// Save to shared cloud (all users see same data)
+async function saveData() {
+    console.log('Saving to shared cloud...');
+    
+    if (!db) {
+        showToast('Database not connected', 'error');
+        return;
+    }
+    
+    if (!currentUser && !isDemoMode) {
+        showToast('Please sign in to save', 'error');
+        return;
+    }
+    
+    // Demo mode - save to localStorage only
+    if (isDemoMode) {
+        try {
+            localStorage.setItem('qldBusinessData_shared_demo', JSON.stringify(database));
+            console.log('Saved to localStorage (demo)');
+            return;
+        } catch (e) {
+            console.error('LocalStorage error:', e);
+            showToast('Error saving demo data', 'error');
+            return;
+        }
+    }
+    
+    // Cloud mode - save to shared collection
+    try {
+        const sharedData = {
+            tenders: database.tenders || [],
+            crmContacts: database.crmContacts || [],
+            interactions: database.interactions || [],
+            lastUpdated: new Date().toISOString(),
+            updatedBy: currentUser.email || currentUser.uid
+        };
+        
+        await db.collection('shared').doc('mainData').set(sharedData);
+        console.log('Saved to shared cloud by:', currentUser.email);
+        showToast('Data saved to cloud', 'success');
+        
+    } catch (err) {
+        console.error('Cloud save error:', err);
+        showToast('Error saving to cloud: ' + err.message, 'error');
+        throw err;
+    }
+}
+
+
 
         async function signIn() {
     console.log('Sign in clicked');
@@ -1490,23 +1597,7 @@ function signOut() {
     }, 0);
 }
 
-        function setupRealtimeSync() {
-            const userDoc = db.collection('users').doc(currentUser.uid);
-            
-            unsubscribe = userDoc.onSnapshot(doc => {
-                if (doc.exists) {
-                    database = doc.data();
-                } else {
-                    userDoc.set({ tenders: [], crmContacts: [], interactions: [] });
-                }
-                loadRegion(currentRegion);
-                updateAllStats();
-                updateSyncStatus('Synced');
-            }, err => {
-                console.error("Sync error:", err);
-                updateSyncStatus('Error');
-            });
-        }
+        
 function resetAuthForm() {
     document.getElementById('authForm').innerHTML = `
         <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
@@ -2193,6 +2284,10 @@ async function deleteCRMContact(id) {
                 followUpDate: document.getElementById('crmFollowUpDate').value,
                 priority: document.getElementById('crmPriority').value,
                 updatedAt: new Date().toISOString()
+                createdBy: currentUser.email || currentUser.uid,
+                createdAt: new Date().toISOString(),
+                updatedBy: currentUser.email || currentUser.uid,
+                updatedAt: new Date().toISOString()
             };
             
             if (id) {
@@ -2329,22 +2424,7 @@ async function deleteCRMContact(id) {
 
         // ==================== UTILITY FUNCTIONS ====================
         
-        async function saveData() {
-            if (isDemoMode) {
-                try {
-                    localStorage.setItem('qldBusinessData_demo_v2', JSON.stringify(database));
-                } catch (e) {
-                    showToast('Error saving: Storage may be full', 'error');
-                }
-            } else if (db && currentUser) {
-                try {
-                    await db.collection('users').doc(currentUser.uid).set(database);
-                } catch (err) {
-                    showToast('Error saving: ' + err.message, 'error');
-                    throw err;
-                }
-            }
-        }
+        
 
         function updateAllStats() {
             // Tender stats
@@ -2483,14 +2563,14 @@ async function deleteCRMContact(id) {
         }
 
         function shareReport() {
-            const shareData = {
+            const initializeata = {
                 title: 'QLD Business Development & CRM Report',
                 text: `Managing ${database.tenders.length} tenders and ${database.crmContacts?.length || 0} contacts across 77 Queensland LGAs`,
                 url: window.location.href
             };
             
             if (navigator.share) {
-                navigator.share(shareData);
+                navigator.share(initialiata);
             } else {
                 navigator.clipboard.writeText(window.location.href);
                 showToast('Link copied to clipboard!', 'success');
@@ -2719,6 +2799,7 @@ async function deleteCRMContact(id) {
 </body>
 
 </html>
+
 
 
 
