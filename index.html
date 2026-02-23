@@ -1,218 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QLD Business Development & CRM System - All 77 LGAs</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    
-    <style>
-        :root {
-            --qld-maroon: #771414;
-            --qld-gold: #FFCD00;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f5f5f0;
-            background-image: radial-gradient(at 0% 0%, rgba(119, 20, 20, 0.03) 0px, transparent 50%);
-        }
-        
-        h1, h2, h3, .display-font {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-        
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-        }
-        
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-        
-        .region-card {
-            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            border-left: 4px solid var(--qld-maroon);
-        }
-        
-        .loading-skeleton {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s infinite;
-        }
-        
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        .sync-indicator {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
-        
-        .priority-high { border-left-color: #dc2626; }
-        .priority-medium { border-left-color: #f59e0b; }
-        .priority-low { border-left-color: #10b981; }
-        
-        .offline-banner {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-            color: white;
-            transform: translateY(-100%);
-            transition: transform 0.3s;
-        }
-        
-        .offline-banner.show {
-            transform: translateY(0);
-        }
-        
-        .region-scroll::-webkit-scrollbar {
-            height: 6px;
-        }
-        
-        .region-scroll::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-        
-        .region-scroll::-webkit-scrollbar-thumb {
-            background: #771414;
-            border-radius: 3px;
-        }
-        
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        
-        .toast {
-            transform: translateX(120%);
-            transition: transform 0.3s ease-out;
-        }
-        
-        .toast.show {
-            transform: translateX(0);
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--qld-maroon), var(--qld-gold));
-        }
-        
-        .region-group {
-            background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
-            border: 1px solid #e5e7eb;
-        }
-        
-        .demo-badge {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-            color: white;
-            font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-weight: 600;
-        }
-        
-        .main-tab {
-            position: relative;
-            transition: all 0.3s;
-        }
-        
-        .main-tab.active {
-            color: #771414;
-            font-weight: 600;
-        }
-        
-        .main-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #771414;
-            border-radius: 3px 3px 0 0;
-        }
-        
-        .status-to-price { background: #dbeafe; color: #1e40af; }
-        .status-priced { background: #dcfce7; color: #166534; }
-        .status-not-pricing { background: #f3f4f6; color: #6b7280; }
-        
-        .crm-contact-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border-left: 4px solid #3b82f6;
-        }
-        
-        .interaction-timeline {
-            position: relative;
-            padding-left: 20px;
-        }
-        
-        .interaction-timeline::before {
-            content: '';
-            position: absolute;
-            left: 6px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #e5e7eb;
-        }
-        
-        .timeline-dot {
-            position: absolute;
-            left: 0;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #3b82f6;
-            border: 3px solid white;
-            box-shadow: 0 0 0 2px #e5e7eb;
-        }
-        
-        .not-won-card {
-            background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
-            border-left: 4px solid #ef4444;
-        }
-    </style>
+    <!-- ... your head content stays the same ... -->
 </head>
 <body class="text-gray-800 min-h-screen">
 
@@ -223,45 +12,7 @@
 
     <!-- Auth Modal -->
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-gradient-to-br from-[#771414] to-[#9f1c1c] rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4">
-                    <i class="fas fa-building"></i>
-                </div>
-                <h2 class="text-2xl font-bold display-font">QLD Business Report</h2>
-                <p class="text-gray-500 mt-2">All 77 Local Government Areas</p>
-            </div>
-            
-            <div id="authForm">
-                <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
-                <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
-                
-                <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
-                    Sign In
-                </button>
-                
-                <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
-                    Create Account
-                </button>
-                
-                <div class="relative mb-4">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">or</span>
-                    </div>
-                </div>
-                
-                <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
-                    <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
-                </button>
-                
-                <p class="text-xs text-center text-gray-400 mt-4">
-                    Demo mode stores data locally on your device. No account required.
-                </p>
-            </div>
-        </div>
+        <!-- ... auth modal content stays the same ... -->
     </div>
 
     <!-- Main App (Hidden until auth or demo) -->
@@ -271,6 +22,7 @@
         <nav class="glass-panel sticky top-0 z-40 border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16 items-center">
+                    <!-- Left side - Logo -->
                     <div class="flex items-center space-x-4">
                         <div class="w-10 h-10 bg-gradient-to-br from-[#771414] to-[#9f1c1c] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
                             QLD
@@ -290,7 +42,13 @@
                         </div>
                     </div>
                     
+                    <!-- Right side - Buttons -->
                     <div class="flex items-center space-x-4">
+                        <!-- ADMIN BUTTON - Initially hidden -->
+                        <button id="adminButton" onclick="showAdminPanel()" class="hidden px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] text-sm font-medium transition-colors shadow-sm">
+                            <i class="fas fa-shield-alt mr-2"></i> Admin
+                        </button>
+                        
                         <button onclick="exportToExcel()" class="hidden md:flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                             <i class="fas fa-file-excel mr-2"></i> Export Excel
                         </button>
@@ -316,681 +74,63 @@
 
         <!-- Main Navigation Tabs -->
         <div class="bg-white border-b border-gray-200 sticky top-16 z-30">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex space-x-8">
-                    <button onclick="switchMainTab('tenders')" id="tab-tenders" class="main-tab active py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
-                        <i class="fas fa-file-contract mr-2 text-[#771414]"></i> Tenders & Opportunities
-                    </button>
-                    <button onclick="switchMainTab('crm')" id="tab-crm" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
-                        <i class="fas fa-users mr-2 text-blue-600"></i> CRM & Contacts
-                    </button>
-                    <button onclick="switchMainTab('analytics')" id="tab-analytics" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
-                        <i class="fas fa-chart-line mr-2 text-green-600"></i> Analytics & Pipeline
-                    </button>
-                </div>
-            </div>
+            <!-- ... tabs content ... -->
         </div>
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            
-            <!-- TENDERS TAB CONTENT -->
-            <div id="content-tenders" class="main-content">
-                
-                <!-- Dashboard Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                    <div class="stat-card rounded-xl p-5 shadow-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-medium text-gray-600 mb-1">To Price</p>
-                                <h3 class="text-2xl font-bold text-gray-900" id="statToPrice">-</h3>
-                            </div>
-                            <div class="p-2 bg-blue-50 rounded-lg">
-                                <i class="fas fa-calculator text-blue-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card rounded-xl p-5 shadow-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-medium text-gray-600 mb-1">Priced</p>
-                                <h3 class="text-2xl font-bold text-gray-900" id="statPriced">-</h3>
-                            </div>
-                            <div class="p-2 bg-green-50 rounded-lg">
-                                <i class="fas fa-check-circle text-green-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card rounded-xl p-5 shadow-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-medium text-gray-600 mb-1">Not Pricing</p>
-                                <h3 class="text-2xl font-bold text-gray-900" id="statNotPricing">-</h3>
-                            </div>
-                            <div class="p-2 bg-gray-50 rounded-lg">
-                                <i class="fas fa-ban text-gray-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card rounded-xl p-5 shadow-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-medium text-gray-600 mb-1">Awarded</p>
-                                <h3 class="text-2xl font-bold text-gray-900" id="statAwarded">-</h3>
-                            </div>
-                            <div class="p-2 bg-yellow-50 rounded-lg">
-                                <i class="fas fa-trophy text-yellow-600"></i>
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Total: <span id="statTotalValue">-</span></p>
-                    </div>
-                    
-                    <div class="stat-card rounded-xl p-5 shadow-sm">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-xs font-medium text-gray-600 mb-1">Not Won</p>
-                                <h3 class="text-2xl font-bold text-gray-900" id="statNotWon">-</h3>
-                            </div>
-                            <div class="p-2 bg-red-50 rounded-lg">
-                                <i class="fas fa-times-circle text-red-600"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Region Selector -->
-                <div class="mb-8">
-                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold display-font text-gray-900">Select Region</h2>
-                            <p class="text-sm text-gray-500 mt-1">Browse by zone or search all 77 Queensland LGAs</p>
-                        </div>
-                        
-                        <!-- Zone Filter -->
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="filterByZone('all')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-[#771414] text-white shadow-md transition-all" data-zone="all">
-                                All Zones
-                            </button>
-                            <button onclick="filterByZone('SEQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SEQ">
-                                South East QLD
-                            </button>
-                            <button onclick="filterByZone('NQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="NQ">
-                                North QLD
-                            </button>
-                            <button onclick="filterByZone('CQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="CQ">
-                                Central QLD
-                            </button>
-                            <button onclick="filterByZone('SWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SWQ">
-                                South West QLD
-                            </button>
-                            <button onclick="filterByZone('FWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="FWQ">
-                                Far North QLD
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Region Tabs Container -->
-                    <div class="region-group rounded-xl p-4 mb-6">
-                        <div class="flex space-x-2 overflow-x-auto pb-2 region-scroll" id="regionTabs" style="max-height: 200px; flex-wrap: wrap;">
-                            <!-- Tabs injected by JS -->
-                        </div>
-                    </div>
-                    
-                    <div id="regionContent" class="space-y-6">
-                        <div class="flex items-center justify-center h-64">
-                            <div class="loading-skeleton w-full h-full rounded-xl"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-<nav class="glass-panel sticky top-0 z-40 border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
-            <!-- Left side - Logo -->
-            <div class="flex items-center space-x-4">
-                <!-- ... logo code ... -->
-            </div>
-            
-            <!-- Right side - Buttons -->
-            <div class="flex items-center space-x-4">
-                <!-- ADD THIS BUTTON -->
-                <button id="adminButton" onclick="showAdminPanel()" class="hidden px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] text-sm font-medium transition-colors shadow-sm">
-                    <i class="fas fa-shield-alt mr-2"></i> Admin
-                </button>
-                
-                <button onclick="exportToExcel()" class="hidden md:flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    <i class="fas fa-file-excel mr-2"></i> Export Excel
-                </button>
-                
-                <button onclick="shareReport()" class="hidden md:flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    <i class="fas fa-share-alt mr-2"></i> Share
-                </button>
-                
-                <button onclick="signOut()" class="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-                
-                <div class="relative">
-                    <input type="text" id="globalSearch" placeholder="Search all 77 LGAs..." 
-                           class="pl-10 pr-4 py-2 rounded-full bg-gray-100 border-none focus:ring-2 focus:ring-[#771414] w-56 text-sm"
-                           onkeyup="globalSearch()">
-                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</nav>
-            <!-- CRM TAB CONTENT -->
-            <div id="content-crm" class="main-content hidden">
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Customer Relationship Management</h2>
-                    <p class="text-gray-600">Manage all your council contacts, interactions, and relationship history across all 77 LGAs.</p>
-                </div>
-
-                <!-- CRM Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-blue-50 rounded-xl p-5 border border-blue-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-blue-600 font-medium">Total Contacts</p>
-                                <h3 class="text-3xl font-bold text-blue-900" id="crmTotalContacts">-</h3>
-                            </div>
-                            <i class="fas fa-address-book text-blue-400 text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="bg-green-50 rounded-xl p-5 border border-green-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-green-600 font-medium">Active Relationships</p>
-                                <h3 class="text-3xl font-bold text-green-900" id="crmActiveContacts">-</h3>
-                            </div>
-                            <i class="fas fa-handshake text-green-400 text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="bg-purple-50 rounded-xl p-5 border border-purple-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-purple-600 font-medium">Interactions (30 days)</p>
-                                <h3 class="text-3xl font-bold text-purple-900" id="crmRecentInteractions">-</h3>
-                            </div>
-                            <i class="fas fa-comments text-purple-400 text-2xl"></i>
-                        </div>
-                    </div>
-                    <div class="bg-orange-50 rounded-xl p-5 border border-orange-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-orange-600 font-medium">Follow-ups Due</p>
-                                <h3 class="text-3xl font-bold text-orange-900" id="crmFollowups">-</h3>
-                            </div>
-                            <i class="fas fa-bell text-orange-400 text-2xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CRM Filters -->
-                <div class="flex flex-col md:flex-row gap-4 mb-6">
-                    <div class="flex-1">
-                        <input type="text" id="crmSearch" placeholder="Search contacts by name, position, or council..." 
-                               class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none"
-                               onkeyup="searchCRM()">
-                    </div>
-                    <select id="crmRegionFilter" onchange="filterCRMByRegion()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                        <option value="all">All Regions</option>
-                        <!-- Options populated by JS -->
-                    </select>
-                    <button onclick="showAddCRMModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                        <i class="fas fa-plus mr-2"></i> Add Contact
-                    </button>
-                </div>
-
-                <!-- CRM Contacts List -->
-                <div id="crmContactsList" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
-
-            <!-- ANALYTICS TAB CONTENT -->
-            <div id="content-analytics" class="main-content hidden">
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Analytics & Pipeline</h2>
-                    <p class="text-gray-600">Track your win rates, pricing performance, and pipeline value across all regions.</p>
-                </div>
-
-                <!-- Analytics Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Win Rate Card -->
-                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h3 class="text-lg font-bold mb-4">Win Rate Analysis</h3>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Total Tenders Priced</span>
-                                <span class="font-bold text-xl" id="analyticsTotalPriced">0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                                <span class="text-green-700">Won</span>
-                                <span class="font-bold text-xl text-green-700" id="analyticsWon">0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                                <span class="text-red-700">Lost</span>
-                                <span class="font-bold text-xl text-red-700" id="analyticsLost">0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                <span class="text-blue-700">Win Rate</span>
-                                <span class="font-bold text-xl text-blue-700" id="analyticsWinRate">0%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pipeline Value Card -->
-                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h3 class="text-lg font-bold mb-4">Pipeline Value</h3>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                <span class="text-blue-700">To Price</span>
-                                <span class="font-bold text-xl text-blue-700" id="analyticsToPriceValue">$0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                                <span class="text-green-700">Priced & Submitted</span>
-                                <span class="font-bold text-xl text-green-700" id="analyticsPricedValue">$0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-                                <span class="text-yellow-700">Awarded Value</span>
-                                <span class="font-bold text-xl text-yellow-700" id="analyticsAwardedValue">$0</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                                <span class="text-purple-700">Total Pipeline</span>
-                                <span class="font-bold text-xl text-purple-700" id="analyticsTotalPipeline">$0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Region Performance -->
-                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                    <h3 class="text-lg font-bold mb-4">Performance by Region</h3>
-                    <div id="regionPerformanceList" class="space-y-3">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-
+            <!-- ... all your tab content ... -->
         </div>
 
         <!-- Tender Entry Modal -->
         <div id="tenderModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                    <h3 class="text-xl font-bold display-font" id="tenderModalTitle">Add New Tender</h3>
-                    <button onclick="closeTenderModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <form id="tenderForm" class="p-6 space-y-4">
-                    <input type="hidden" id="tenderId">
-                    <input type="hidden" id="tenderRegion">
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
-                            <input type="text" id="tenderTitle" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                            <select id="tenderCategory" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
-                                <option value="Infrastructure">Infrastructure</option>
-                                <option value="Construction">Construction</option>
-                                <option value="Professional Services">Professional Services</option>
-                                <option value="IT & Digital">IT & Digital</option>
-                                <option value="Environmental">Environmental</option>
-                                <option value="Community Services">Community Services</option>
-                                <option value="Waste Management">Waste Management</option>
-                                <option value="Water & Sewerage">Water & Sewerage</option>
-                                <option value="Roads & Transport">Roads & Transport</option>
-                                <option value="Parks & Recreation">Parks & Recreation</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                            <select id="tenderStatus" required onchange="togglePricingFields()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
-                                <option value="TO_PRICE">TO PRICE</option>
-                                <option value="PRICED">PRICED</option>
-                                <option value="NOT_PRICING">NOT PRICING</option>
-                                <option value="AWARDED">AWARDED</option>
-                                <option value="NOT_WON">NOT WON</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Value ($)</label>
-                            <input type="text" id="tenderValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Closing Date</label>
-                            <input type="date" id="tenderClosingDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <!-- PRICED Fields -->
-                        <div id="pricedFields" class="col-span-2 hidden border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-green-700 mb-3 flex items-center">
-                                <i class="fas fa-check-circle mr-2"></i> Pricing Details
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
-                                    <input type="text" id="ourPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Submission Date</label>
-                                    <input type="date" id="submissionDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- NOT PRICING Fields -->
-                        <div id="notPricingFields" class="col-span-2 hidden border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
-                                <i class="fas fa-ban mr-2"></i> Reason for Not Pricing
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                                    <select id="notPricingReason" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none bg-white">
-                                        <option value="">Select reason...</option>
-                                        <option value="Capacity">At Capacity</option>
-                                        <option value="Capability">Outside Capability</option>
-                                        <option value="Location">Too Remote</option>
-                                        <option value="Value">Too Small/Large</option>
-                                        <option value="Conflict">Conflict of Interest</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
-                                    <textarea id="notPricingComments" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- AWARDED Fields -->
-                        <div id="awardedFields" class="col-span-2 hidden border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-yellow-700 mb-3 flex items-center">
-                                <i class="fas fa-trophy mr-2"></i> Award Details
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Awarded Date</label>
-                                    <input type="date" id="awardedDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Contract Value ($)</label>
-                                    <input type="text" id="awardedValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Scope Summary</label>
-                                    <textarea id="awardedScope" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- NOT WON Fields -->
-                        <div id="notWonFields" class="col-span-2 hidden border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-red-700 mb-3 flex items-center">
-                                <i class="fas fa-times-circle mr-2"></i> Competitor Information
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Who Won?</label>
-                                    <input type="text" id="winnerName" placeholder="Company name" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Their Price ($) (if known)</label>
-                                    <input type="text" id="winnerPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
-                                    <input type="text" id="ourLosingPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Announced</label>
-                                    <input type="date" id="resultDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Comments / Lessons Learned</label>
-                                    <textarea id="notWonComments" rows="3" placeholder="Why did we lose? What could we do better next time?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-span-2 border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
-                                <i class="fas fa-user-tie mr-2 text-[#771414]"></i> Council Contact Details
-                            </h4>
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                            <input type="text" id="tenderContactName" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                            <input type="text" id="tenderContactPosition" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="tenderContactEmail" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input type="tel" id="tenderContactPhone" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
-                            <textarea id="tenderDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" onclick="closeTenderModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-6 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] transition-colors shadow-lg">
-                            <i class="fas fa-save mr-2"></i> Save Tender
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <!-- ... modal content ... -->
         </div>
 
         <!-- CRM Contact Modal -->
         <div id="crmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                    <h3 class="text-xl font-bold display-font" id="crmModalTitle">Add CRM Contact</h3>
-                    <button onclick="closeCRMModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <form id="crmForm" class="p-6 space-y-4">
-                    <input type="hidden" id="crmContactId">
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Region *</label>
-                            <select id="crmRegion" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                                <!-- Populated by JS -->
-                            </select>
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Type</label>
-                            <select id="crmType" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                                <option value="Procurement">Procurement</option>
-                                <option value="Engineering">Engineering</option>
-                                <option value="Management">Management</option>
-                                <option value="Elected">Elected Member</option>
-                                <option value="Operations">Operations</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                            <input type="text" id="crmName" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Position/Title *</label>
-                            <input type="text" id="crmPosition" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                            <input type="text" id="crmDepartment" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Direct Phone</label>
-                            <input type="tel" id="crmDirectPhone" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
-                            <input type="tel" id="crmMobile" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                            <input type="email" id="crmEmail" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">LinkedIn Profile</label>
-                            <input type="url" id="crmLinkedIn" placeholder="https://linkedin.com/in/..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                        </div>
-                        
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Relationship Notes</label>
-                            <textarea id="crmNotes" rows="3" placeholder="How did you meet? Interests, family, preferences..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
-                        </div>
-                        
-                        <div class="col-span-2 border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
-                                <i class="fas fa-clock mr-2"></i> Last Interaction
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                    <input type="date" id="crmLastContactDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                                    <select id="crmLastContactType" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                                        <option value="">Select...</option>
-                                        <option value="Meeting">Meeting</option>
-                                        <option value="Phone">Phone Call</option>
-                                        <option value="Email">Email</option>
-                                        <option value="Event">Industry Event</option>
-                                        <option value="Tender">Tender Discussion</option>
-                                    </select>
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes from Last Contact</label>
-                                    <textarea id="crmLastContactNotes" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-span-2 border-t pt-4 mt-2">
-                            <h4 class="font-semibold text-orange-900 mb-3 flex items-center">
-                                <i class="fas fa-bell mr-2"></i> Follow-up Reminder
-                            </h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Next Follow-up Date</label>
-                                    <input type="date" id="crmFollowUpDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                                </div>
-                                <div class="col-span-2 md:col-span-1">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                    <select id="crmPriority" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                                        <option value="High">High</option>
-                                        <option value="Medium" selected>Medium</option>
-                                        <option value="Low">Low</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" onclick="closeCRMModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg">
-                            <i class="fas fa-save mr-2"></i> Save Contact
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <!-- ... modal content ... -->
         </div>
 
         <!-- Interaction Modal -->
         <div id="interactionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+            <!-- ... modal content ... -->
+        </div>
+
+        <!-- Admin Panel Modal - MOVED HERE (outside script, inside mainApp) -->
+        <div id="adminPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                    <h3 class="text-xl font-bold display-font">Add Interaction</h3>
-                    <button onclick="closeInteractionModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <h3 class="text-xl font-bold display-font flex items-center">
+                        <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Approval Panel
+                    </h3>
+                    <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
-                <form id="interactionForm" class="p-6 space-y-4">
-                    <input type="hidden" id="interactionContactId">
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                        <input type="date" id="interactionDate" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                <div class="p-6">
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-gray-900 mb-2">Pending Approval Requests</h4>
+                        <p class="text-sm text-gray-500">Review and approve new user registrations</p>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Type *</label>
-                        <select id="interactionType" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                            <option value="Meeting">Meeting</option>
-                            <option value="Phone">Phone Call</option>
-                            <option value="Email">Email</option>
-                            <option value="Video">Video Call</option>
-                            <option value="Event">Industry Event</option>
-                            <option value="Site Visit">Site Visit</option>
-                            <option value="Tender Discussion">Tender Discussion</option>
-                        </select>
+                    <div id="pendingApprovalsList" class="space-y-4">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>Loading requests...</p>
+                        </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes *</label>
-                        <textarea id="interactionNotes" required rows="4" placeholder="What was discussed? Any action items?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none"></textarea>
+                    <div class="mt-8 pt-6 border-t">
+                        <h4 class="font-semibold text-gray-900 mb-2">Approved Users</h4>
+                        <div id="approvedUsersList" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400">
+                                <p>Loading approved users...</p>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Next Steps</label>
-                        <input type="text" id="interactionNextSteps" placeholder="Any follow-up required?" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 pt-4 border-t">
-                        <button type="button" onclick="closeInteractionModal()" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg">
-                            <i class="fas fa-plus mr-2"></i> Add Interaction
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -1006,9 +146,11 @@
         </div>
     </div>
 
+    <!-- ==================== JAVASCRIPT ==================== -->
     <script>
         // ==================== ALL 77 QUEENSLAND LGAs ====================
         const qldRegions = [
+   
             // SOUTH EAST QUEENSLAND (SEQ) - 20 LGAs
             { id: 'brisbane', name: 'Brisbane City Council', type: 'City', population: '1.2M', zone: 'SEQ', region: 'Metropolitan' },
             { id: 'goldcoast', name: 'Gold Coast City Council', type: 'City', population: '600K', zone: 'SEQ', region: 'Metropolitan' },
@@ -1098,17 +240,16 @@
             { id: 'flinders', name: 'Flinders Shire Council', type: 'Shire', population: '1.5K', zone: 'FWQ', region: 'North West' }
         ];
 
-        // ==================== FIREBASE CONFIGURATION ====================
-       // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
-  authDomain: "queensland-business-reporting.firebaseapp.com",
-  projectId: "queensland-business-reporting",
-  storageBucket: "queensland-business-reporting.firebasestorage.app",
-  messagingSenderId: "271437640355",
-  appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
-  measurementId: "G-XE0LCMYLC5"
 
+        // ==================== FIREBASE CONFIGURATION ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
+            authDomain: "queensland-business-reporting.firebaseapp.com",
+            projectId: "queensland-business-reporting",
+            storageBucket: "queensland-business-reporting.firebasestorage.app",
+            messagingSenderId: "271437640355",
+            appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
+            measurementId: "G-XE0LCMYLC5"
         };
 
         let db = null;
@@ -1116,6 +257,7 @@ const firebaseConfig = {
         let isOnline = navigator.onLine;
         let currentUser = null;
         let isDemoMode = false;
+        let isAdmin = false;  // ADD THIS LINE
         let unsubscribe = null;
         let currentZone = 'all';
         let currentMainTab = 'tenders';
@@ -1123,7 +265,7 @@ const firebaseConfig = {
         // Initialize Firebase only if properly configured
         function initializeFirebase() {
             try {
-                if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey !== "") {
+                if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
                     firebase.initializeApp(firebaseConfig);
                     db = firebase.firestore();
                     auth = firebase.auth();
@@ -1150,292 +292,50 @@ const firebaseConfig = {
 
         // ==================== AUTHENTICATION & DEMO MODE ====================
         
-function enterDemoMode() {
-    isDemoMode = true;
-    currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
-    
-    document.getElementById('authModal').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    document.getElementById('userEmail').textContent = 'Demo Mode';
-    document.getElementById('demoBadge').classList.remove('hidden');
-    
-    const saved = localStorage.getItem('qldBusinessData_demo_v2');
-    if (saved) {
-        try {
-            database = JSON.parse(saved);
-            showToast('Loaded your saved demo data', 'success');
-        } catch (e) {
-            loadSampleData();
-        }
-    } else {
-        loadSampleData();
-    }
-    
-    initializeApp();
-async function initializeApp() {
-    // Check if admin and show button
-    if (await checkIfAdmin()) {
-        document.getElementById('adminButton').classList.remove('hidden');
-    }
-    
-    renderRegionTabs();
-    populateCRMRegionSelect();
-    
-    if (!isDemoMode && db && currentUser) {
-        setupRealtimeSync();
-    } else {
-        if (!isDemoMode) loadSampleData();
-        loadRegion(currentRegion);
-        updateAllStats();
-    }
-    
-    // ... rest of function
-}
-    showToast('Demo mode active - Data saves to this browser only', 'info');
-}
-
-if (firebaseInitialized && auth) {
-    auth.onAuthStateChanged(async user => {
-        if (user) {
-            // Check if email is verified
-            if (!user.emailVerified) {
-                showToast('Please verify your email before continuing. Check your inbox.', 'warning');
-                await auth.signOut();
-                
-                // Show verification message
-                document.getElementById('authForm').innerHTML = `
-                    <div class="text-center">
-                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                        <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
-                        <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                            Resend Email
-                        </button>
-                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            I've Verified - Continue
-                        </button>
-                        <p class="text-xs text-gray-400 mt-4">Waiting for admin approval after verification...</p>
-                    </div>
-                `;
-                return;
-            }
+        function enterDemoMode() {
+            isDemoMode = true;
+            currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
             
-            // Check if user is approved by admin
-            try {
-                const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
-                
-                if (!approvalDoc.exists || !approvalDoc.data().approved) {
-                    showToast('Your account is pending admin approval.', 'warning');
-                    await auth.signOut();
-                    
-                    // Show pending approval message
-                    document.getElementById('authForm').innerHTML = `
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
-                            <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account before you can access the system.</p>
-                            <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
-                            <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
-                                Check Status
-                            </button>
-                            <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                                Back to Login
-                            </button>
-                        </div>
-                    `;
-                    
-                    // Create approval request in database
-                    await db.collection('approvalRequests').doc(user.uid).set({
-                        email: user.email,
-                        requestedAt: new Date().toISOString(),
-                        status: 'pending',
-                        uid: user.uid
-                    });
-                    
-                    return;
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = 'Demo Mode';
+            document.getElementById('demoBadge').classList.remove('hidden');
+            
+            const saved = localStorage.getItem('qldBusinessData_demo_v2');
+            if (saved) {
+                try {
+                    database = JSON.parse(saved);
+                    showToast('Loaded your saved demo data', 'success');
+                } catch (e) {
+                    loadSampleData();
                 }
-                
-                // User is verified and approved - grant access
-                currentUser = user;
-                isDemoMode = false;
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('demoBadge').classList.add('hidden');
-                initializeApp();
-                showToast('Welcome! Account approved and verified.', 'success');
-                
-            } catch (err) {
-                console.error("Approval check failed:", err);
-                showToast('Error checking approval status. Please try again.', 'error');
-                await auth.signOut();
+            } else {
+                loadSampleData();
             }
             
-        } else if (!isDemoMode) {
-            // Reset auth form if not in demo mode
-            resetAuthForm();
-            document.getElementById('authModal').classList.remove('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
+            initializeApp();
+            showToast('Demo mode active - Data saves to this browser only', 'info');
         }
-    });
-} else {
-    document.getElementById('authModal').classList.remove('hidden');
-    document.getElementById('mainApp').classList.add('hidden');
-}
 
-function resetAuthForm() {
-    document.getElementById('authForm').innerHTML = `
-        <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
-        <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
-        
-        <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
-            Sign In
-        </button>
-        
-        <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
-            Create Account
-        </button>
-        
-        <div class="relative mb-4">
-            <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-gray-300"></div>
-            </div>
-            <div class="relative flex justify-center text-sm">
-                <span class="px-2 bg-white text-gray-500">or</span>
-            </div>
-        </div>
-        
-        <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
-            <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
-        </button>
-        
-        <p class="text-xs text-center text-gray-400 mt-4">
-            Demo mode stores data locally on your device. No account required.
-        </p>
-    `;
-}
-
-async function resendVerificationEmail(email) {
-    const user = auth.currentUser;
-    if (user) {
-        try {
-            await user.sendEmailVerification();
-            showToast('Verification email resent!', 'success');
-        } catch (err) {
-            showToast('Error: ' + err.message, 'error');
+        // FIXED: Check if admin function
+        async function checkIfAdmin() {
+            if (!currentUser) return false;
+            // Only james.s.gray1992@gmail.com is admin
+            isAdmin = currentUser.email === "james.s.gray1992@gmail.com"; 
+            return isAdmin;
         }
-    }
-}
 
-async function checkApprovalStatus(uid) {
-    try {
-        const doc = await db.collection('approvedUsers').doc(uid).get();
-        if (doc.exists && doc.data().approved) {
-            showToast('You have been approved! Please sign in again.', 'success');
-            setTimeout(() => location.reload(), 2000);
-        } else {
-            showToast('Still pending approval. Please check back later or contact admin.', 'warning');
-        }
-    } catch (err) {
-        showToast('Error checking status', 'error');
-    }
-}
-
-function signIn() {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please enter email and password', 'error');
-        return;
-    }
-
-    if (auth) {
-        auth.signInWithEmailAndPassword(email, password)
-            .catch(error => {
-                showToast(error.message, 'error');
-            });
-    } else {
-        showToast('Firebase not configured. Please use Demo Mode.', 'info');
-        setTimeout(enterDemoMode, 1000);
-    }
-}
-
-async function signUp() {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please enter email and password', 'error');
-        return;
-    }
-
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'error');
-        return;
-    }
-
-    if (auth) {
-        try {
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-            
-            // Send verification email immediately
-            await userCredential.user.sendEmailVerification();
-            
-            showToast('Account created! Please verify your email.', 'success');
-            
-            // Show verification waiting screen
-            document.getElementById('authForm').innerHTML = `
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl mx-auto mb-4">
-                        <i class="fas fa-envelope-open-text"></i>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
-                    <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>.</p>
-                    <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account before you can access the system.</p>
-                    <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
-                        Resend Verification Email
-                    </button>
-                    <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                        Back to Login
-                    </button>
-                </div>
-            `;
-            
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
-    } else {
-        showToast('Cannot create account - Firebase not configured', 'error');
-        setTimeout(enterDemoMode, 1000);
-    }
-}
-
-function signOut() {
-    if (isDemoMode) {
-        if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
-            isDemoMode = false;
-            currentUser = null;
-            document.getElementById('authModal').classList.remove('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
-            document.getElementById('demoBadge').classList.add('hidden');
-            resetAuthForm();
-        }
-    } else if (auth) {
-        auth.signOut();
-        resetAuthForm();
-    }
-}
-
-        // ==================== APP INITIALIZATION ====================
-        
-        function initializeApp() {
+        // FIXED: Properly structured initializeApp function
+        async function initializeApp() {
             renderRegionTabs();
             populateCRMRegionSelect();
+            
+            // Check if admin and show button - MOVED TO TOP
+            if (await checkIfAdmin()) {
+                document.getElementById('adminButton').classList.remove('hidden');
+            } else {
+                document.getElementById('adminButton').classList.add('hidden');
+            }
             
             if (!isDemoMode && db && currentUser) {
                 setupRealtimeSync();
@@ -1459,6 +359,249 @@ function signOut() {
             });
         }
 
+        // Auth state observer
+        if (firebaseInitialized && auth) {
+            auth.onAuthStateChanged(async user => {
+                if (user) {
+                    // Check if email is verified
+                    if (!user.emailVerified) {
+                        showToast('Please verify your email before continuing. Check your inbox.', 'warning');
+                        await auth.signOut();
+                        
+                        // Show verification message
+                        document.getElementById('authForm').innerHTML = `
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                                <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
+                                <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                                    Resend Email
+                                </button>
+                                <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                    I've Verified - Continue
+                                </button>
+                                <p class="text-xs text-gray-400 mt-4">Waiting for admin approval after verification...</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Check if user is approved by admin
+                    try {
+                        const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
+                        
+                        if (!approvalDoc.exists || !approvalDoc.data().approved) {
+                            showToast('Your account is pending admin approval.', 'warning');
+                            await auth.signOut();
+                            
+                            // Show pending approval message
+                            document.getElementById('authForm').innerHTML = `
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
+                                    <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account before you can access the system.</p>
+                                    <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
+                                    <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
+                                        Check Status
+                                    </button>
+                                    <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                        Back to Login
+                                    </button>
+                                </div>
+                            `;
+                            
+                            // Create approval request in database
+                            await db.collection('approvalRequests').doc(user.uid).set({
+                                email: user.email,
+                                requestedAt: new Date().toISOString(),
+                                status: 'pending',
+                                uid: user.uid
+                            });
+                            
+                            return;
+                        }
+                        
+                        // User is verified and approved - grant access
+                        currentUser = user;
+                        isDemoMode = false;
+                        document.getElementById('authModal').classList.add('hidden');
+                        document.getElementById('mainApp').classList.remove('hidden');
+                        document.getElementById('userEmail').textContent = user.email;
+                        document.getElementById('demoBadge').classList.add('hidden');
+                        
+                        await initializeApp(); // AWAIT HERE
+                        showToast('Welcome! Account approved and verified.', 'success');
+                        
+                    } catch (err) {
+                        console.error("Approval check failed:", err);
+                        showToast('Error checking approval status. Please try again.', 'error');
+                        await auth.signOut();
+                    }
+                    
+                } else if (!isDemoMode) {
+                    // Reset auth form if not in demo mode
+                    resetAuthForm();
+                    document.getElementById('authModal').classList.remove('hidden');
+                    document.getElementById('mainApp').classList.add('hidden');
+                }
+            });
+        } else {
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function resetAuthForm() {
+            document.getElementById('authForm').innerHTML = `
+                <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
+                <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
+                
+                <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
+                    Sign In
+                </button>
+                
+                <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
+                    Create Account
+                </button>
+                
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                </div>
+                
+                <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
+                </button>
+                
+                <p class="text-xs text-center text-gray-400 mt-4">
+                    Demo mode stores data locally on your device. No account required.
+                </p>
+            `;
+        }
+
+        async function resendVerificationEmail(email) {
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    await user.sendEmailVerification();
+                    showToast('Verification email resent!', 'success');
+                } catch (err) {
+                    showToast('Error: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function checkApprovalStatus(uid) {
+            try {
+                const doc = await db.collection('approvedUsers').doc(uid).get();
+                if (doc.exists && doc.data().approved) {
+                    showToast('You have been approved! Please sign in again.', 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast('Still pending approval. Please check back later or contact admin.', 'warning');
+                }
+            } catch (err) {
+                showToast('Error checking status', 'error');
+            }
+        }
+
+        function signIn() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                showToast('Please enter email and password', 'error');
+                return;
+            }
+
+            if (auth) {
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(error => {
+                        showToast(error.message, 'error');
+                    });
+            } else {
+                showToast('Firebase not configured. Please use Demo Mode.', 'info');
+                setTimeout(enterDemoMode, 1000);
+            }
+        }
+
+        async function signUp() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                showToast('Please enter email and password', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            if (auth) {
+                try {
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    
+                    // Send verification email immediately
+                    await userCredential.user.sendEmailVerification();
+                    
+                    showToast('Account created! Please verify your email.', 'success');
+                    
+                    // Show verification waiting screen
+                    document.getElementById('authForm').innerHTML = `
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl mx-auto mb-4">
+                                <i class="fas fa-envelope-open-text"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                            <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>.</p>
+                            <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account before you can access the system.</p>
+                            <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                                Resend Verification Email
+                            </button>
+                            <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                Back to Login
+                            </button>
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            } else {
+                showToast('Cannot create account - Firebase not configured', 'error');
+                setTimeout(enterDemoMode, 1000);
+            }
+        }
+
+        function signOut() {
+            if (isDemoMode) {
+                if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
+                    isDemoMode = false;
+                    currentUser = null;
+                    isAdmin = false;
+                    document.getElementById('adminButton').classList.add('hidden');
+                    document.getElementById('authModal').classList.remove('hidden');
+                    document.getElementById('mainApp').classList.add('hidden');
+                    document.getElementById('demoBadge').classList.add('hidden');
+                    resetAuthForm();
+                }
+            } else if (auth) {
+                auth.signOut();
+                isAdmin = false;
+                document.getElementById('adminButton').classList.add('hidden');
+                resetAuthForm();
+            }
+        }
+
         function setupRealtimeSync() {
             const userDoc = db.collection('users').doc(currentUser.uid);
             
@@ -1478,6 +621,7 @@ function signOut() {
         }
 
         function loadSampleData() {
+            // ... your sample data stays the same ...
             database = {
                 tenders: [
                     {
@@ -2451,218 +1595,173 @@ function signOut() {
             if (e.target === this) closeInteractionModal();
         });
 
-// ==================== ADMIN FUNCTIONS ====================
+        // ==================== ADMIN FUNCTIONS ====================
 
-let isAdmin = false;
-
-async function checkIfAdmin() {
-    if (!currentUser) return false;
-    // Check if current user is admin (you)
-    isAdmin = currentUser.email === "james.s.gray1992@gmail.com"; 
-    return isAdmin;
-}
-
-async function showAdminPanel() {
-    if (!await checkIfAdmin()) {
-        showToast('Access denied. Admin only.', 'error');
-        return;
-    }
-    
-    document.getElementById('adminPanel').classList.remove('hidden');
-    loadPendingApprovals();
-    loadApprovedUsers();
-}
-
-function closeAdminPanel() {
-    document.getElementById('adminPanel').classList.add('hidden');
-}
-
-async function loadPendingApprovals() {
-    try {
-        const snapshot = await db.collection('approvalRequests')
-            .where('status', '==', 'pending')
-            .orderBy('requestedAt', 'desc')
-            .get();
-        
-        const container = document.getElementById('pendingApprovalsList');
-        
-        if (snapshot.empty) {
-            container.innerHTML = `
-                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
-                    <p>No pending approval requests</p>
-                </div>
-            `;
-            return;
+        async function showAdminPanel() {
+            if (!await checkIfAdmin()) {
+                showToast('Access denied. Admin only.', 'error');
+                return;
+            }
+            
+            document.getElementById('adminPanel').classList.remove('hidden');
+            loadPendingApprovals();
+            loadApprovedUsers();
         }
-        
-        container.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
-            return `
-            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                    <div class="font-semibold text-gray-900">${data.email}</div>
-                    <div class="text-sm text-gray-500">Requested: ${date}</div>
-                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
-                        <i class="fas fa-check mr-1"></i> Approve
-                    </button>
-                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
-                        <i class="fas fa-times mr-1"></i> Reject
-                    </button>
-                </div>
-            </div>
-            `;
-        }).join('');
-        
-    } catch (err) {
-        console.error("Error loading approvals:", err);
-        document.getElementById('pendingApprovalsList').innerHTML = `
-            <div class="text-center py-8 text-red-500">
-                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                <p>Error loading requests. Check permissions.</p>
-            </div>
-        `;
-    }
-}
 
-async function loadApprovedUsers() {
-    try {
-        const snapshot = await db.collection('approvedUsers')
-            .where('approved', '==', true)
-            .orderBy('approvedAt', 'desc')
-            .get();
-        
-        const container = document.getElementById('approvedUsersList');
-        
-        if (snapshot.empty) {
-            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
-            return;
+        function closeAdminPanel() {
+            document.getElementById('adminPanel').classList.add('hidden');
         }
-        
-        container.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
-            return `
-            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <div>
-                    <div class="font-medium text-gray-900">${data.email}</div>
-                    <div class="text-xs text-green-700">Approved: ${date}</div>
-                </div>
-                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
-                    <i class="fas fa-user-times"></i> Revoke
-                </button>
-            </div>
-            `;
-        }).join('');
-        
-    } catch (err) {
-        console.error("Error loading approved users:", err);
-    }
-}
 
-async function approveUser(uid, email) {
-    try {
-        // Add to approved users
-        await db.collection('approvedUsers').doc(uid).set({
-            email: email,
-            approved: true,
-            approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.email
-        });
-        
-        // Update request status
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'approved',
-            approvedAt: new Date().toISOString()
-        });
-        
-        showToast(`Approved ${email}`, 'success');
-        loadPendingApprovals();
-        loadApprovedUsers();
-        
-    } catch (err) {
-        showToast('Error approving user: ' + err.message, 'error');
-    }
-}
-
-async function rejectUser(uid) {
-    if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
-        return;
-    }
-    
-    try {
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'rejected',
-            rejectedAt: new Date().toISOString()
-        });
-        
-        showToast('User rejected', 'info');
-        loadPendingApprovals();
-        
-    } catch (err) {
-        showToast('Error rejecting user: ' + err.message, 'error');
-    }
-}
-
-async function revokeAccess(uid) {
-    if (!confirm('Are you sure you want to revoke this user\'s access?')) {
-        return;
-    }
-    
-    try {
-        await db.collection('approvedUsers').doc(uid).update({
-            approved: false,
-            revokedAt: new Date().toISOString(),
-            revokedBy: currentUser.email
-        });
-        
-        showToast('Access revoked', 'success');
-        loadApprovedUsers();
-        
-    } catch (err) {
-        showToast('Error revoking access: ' + err.message, 'error');
-    }
-}
-
-        <div id="adminPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                    <h3 class="text-xl font-bold display-font flex items-center">
-                        <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Approval Panel
-                    </h3>
-                    <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
+        async function loadPendingApprovals() {
+            try {
+                const snapshot = await db.collection('approvalRequests')
+                    .where('status', '==', 'pending')
+                    .orderBy('requestedAt', 'desc')
+                    .get();
                 
-                <div class="p-6">
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-900 mb-2">Pending Approval Requests</h4>
-                        <p class="text-sm text-gray-500">Review and approve new user registrations</p>
-                    </div>
-                    
-                    <div id="pendingApprovalsList" class="space-y-4">
-                        <div class="text-center py-8 text-gray-400">
-                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                            <p>Loading requests...</p>
+                const container = document.getElementById('pendingApprovalsList');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                            <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
+                            <p>No pending approval requests</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
+                    return `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <div class="font-semibold text-gray-900">${data.email}</div>
+                            <div class="text-sm text-gray-500">Requested: ${date}</div>
+                            <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                                <i class="fas fa-check mr-1"></i> Approve
+                            </button>
+                            <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                                <i class="fas fa-times mr-1"></i> Reject
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="mt-8 pt-6 border-t">
-                        <h4 class="font-semibold text-gray-900 mb-2">Approved Users</h4>
-                        <div id="approvedUsersList" class="space-y-2">
-                            <div class="text-center py-4 text-gray-400">
-                                <p>Loading approved users...</p>
-                            </div>
-                        </div>
+                    `;
+                }).join('');
+                
+            } catch (err) {
+                console.error("Error loading approvals:", err);
+                document.getElementById('pendingApprovalsList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p>Error loading requests. Check permissions.</p>
                     </div>
-                </div>
-            </div>
-        </div>
+                `;
+            }
+        }
 
-    /body
-/html
+        async function loadApprovedUsers() {
+            try {
+                const snapshot = await db.collection('approvedUsers')
+                    .where('approved', '==', true)
+                    .orderBy('approvedAt', 'desc')
+                    .get();
+                
+                const container = document.getElementById('approvedUsersList');
+                
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
+                    return;
+                }
+                
+                container.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
+                    return `
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
+                        <div>
+                            <div class="font-medium text-gray-900">${data.email}</div>
+                            <div class="text-xs text-green-700">Approved: ${date}</div>
+                        </div>
+                        <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                            <i class="fas fa-user-times"></i> Revoke
+                        </button>
+                    </div>
+                    `;
+                }).join('');
+                
+            } catch (err) {
+                console.error("Error loading approved users:", err);
+            }
+        }
+
+        async function approveUser(uid, email) {
+            try {
+                // Add to approved users
+                await db.collection('approvedUsers').doc(uid).set({
+                    email: email,
+                    approved: true,
+                    approvedAt: new Date().toISOString(),
+                    approvedBy: currentUser.email
+                });
+                
+                // Update request status
+                await db.collection('approvalRequests').doc(uid).update({
+                    status: 'approved',
+                    approvedAt: new Date().toISOString()
+                });
+                
+                showToast(`Approved ${email}`, 'success');
+                loadPendingApprovals();
+                loadApprovedUsers();
+                
+            } catch (err) {
+                showToast('Error approving user: ' + err.message, 'error');
+            }
+        }
+
+        async function rejectUser(uid) {
+            if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
+                return;
+            }
+            
+            try {
+                await db.collection('approvalRequests').doc(uid).update({
+                    status: 'rejected',
+                    rejectedAt: new Date().toISOString()
+                });
+                
+                showToast('User rejected', 'info');
+                loadPendingApprovals();
+                
+            } catch (err) {
+                showToast('Error rejecting user: ' + err.message, 'error');
+            }
+        }
+
+        async function revokeAccess(uid) {
+            if (!confirm('Are you sure you want to revoke this user\'s access?')) {
+                return;
+            }
+            
+            try {
+                await db.collection('approvedUsers').doc(uid).update({
+                    approved: false,
+                    revokedAt: new Date().toISOString(),
+                    revokedBy: currentUser.email
+                });
+                
+                showToast('Access revoked', 'success');
+                loadApprovedUsers();
+                
+            } catch (err) {
+                showToast('Error revoking access: ' + err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
