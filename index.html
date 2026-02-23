@@ -447,6 +447,43 @@
                 </div>
             </div>
 
+<nav class="glass-panel sticky top-0 z-40 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            <!-- Left side - Logo -->
+            <div class="flex items-center space-x-4">
+                <!-- ... logo code ... -->
+            </div>
+            
+            <!-- Right side - Buttons -->
+            <div class="flex items-center space-x-4">
+                <!-- ADD THIS BUTTON -->
+                <button id="adminButton" onclick="showAdminPanel()" class="hidden px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] text-sm font-medium transition-colors shadow-sm">
+                    <i class="fas fa-shield-alt mr-2"></i> Admin
+                </button>
+                
+                <button onclick="exportToExcel()" class="hidden md:flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <i class="fas fa-file-excel mr-2"></i> Export Excel
+                </button>
+                
+                <button onclick="shareReport()" class="hidden md:flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <i class="fas fa-share-alt mr-2"></i> Share
+                </button>
+                
+                <button onclick="signOut()" class="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+                
+                <div class="relative">
+                    <input type="text" id="globalSearch" placeholder="Search all 77 LGAs..." 
+                           class="pl-10 pr-4 py-2 rounded-full bg-gray-100 border-none focus:ring-2 focus:ring-[#771414] w-56 text-sm"
+                           onkeyup="globalSearch()">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
             <!-- CRM TAB CONTENT -->
             <div id="content-crm" class="main-content hidden">
                 <div class="mb-6">
@@ -1062,8 +1099,7 @@
         ];
 
         // ==================== FIREBASE CONFIGURATION ====================
-        // NOTE: Leave this as-is for demo mode to work automatically
-      
+       // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
   authDomain: "queensland-business-reporting.firebaseapp.com",
@@ -1072,6 +1108,7 @@ const firebaseConfig = {
   messagingSenderId: "271437640355",
   appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
   measurementId: "G-XE0LCMYLC5"
+
         };
 
         let db = null;
@@ -1113,122 +1150,286 @@ const firebaseConfig = {
 
         // ==================== AUTHENTICATION & DEMO MODE ====================
         
-        function enterDemoMode() {
-            isDemoMode = true;
-            currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
-            
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('userEmail').textContent = 'Demo Mode';
-            document.getElementById('demoBadge').classList.remove('hidden');
-            
-            const saved = localStorage.getItem('qldBusinessData_demo_v2');
-            if (saved) {
-                try {
-                    database = JSON.parse(saved);
-                    showToast('Loaded your saved demo data', 'success');
-                } catch (e) {
-                    loadSampleData();
-                }
-            } else {
-                loadSampleData();
+function enterDemoMode() {
+    isDemoMode = true;
+    currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
+    
+    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('userEmail').textContent = 'Demo Mode';
+    document.getElementById('demoBadge').classList.remove('hidden');
+    
+    const saved = localStorage.getItem('qldBusinessData_demo_v2');
+    if (saved) {
+        try {
+            database = JSON.parse(saved);
+            showToast('Loaded your saved demo data', 'success');
+        } catch (e) {
+            loadSampleData();
+        }
+    } else {
+        loadSampleData();
+    }
+    
+    initializeApp();
+async function initializeApp() {
+    // Check if admin and show button
+    if (await checkIfAdmin()) {
+        document.getElementById('adminButton').classList.remove('hidden');
+    }
+    
+    renderRegionTabs();
+    populateCRMRegionSelect();
+    
+    if (!isDemoMode && db && currentUser) {
+        setupRealtimeSync();
+    } else {
+        if (!isDemoMode) loadSampleData();
+        loadRegion(currentRegion);
+        updateAllStats();
+    }
+    
+    // ... rest of function
+}
+    showToast('Demo mode active - Data saves to this browser only', 'info');
+}
+
+if (firebaseInitialized && auth) {
+    auth.onAuthStateChanged(async user => {
+        if (user) {
+            // Check if email is verified
+            if (!user.emailVerified) {
+                showToast('Please verify your email before continuing. Check your inbox.', 'warning');
+                await auth.signOut();
+                
+                // Show verification message
+                document.getElementById('authForm').innerHTML = `
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 text-2xl mx-auto mb-4">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                        <p class="text-gray-600 mb-4">We've sent a verification link to ${user.email}. Please check your inbox and click the link.</p>
+                        <button onclick="resendVerificationEmail('${user.email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                            Resend Email
+                        </button>
+                        <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            I've Verified - Continue
+                        </button>
+                        <p class="text-xs text-gray-400 mt-4">Waiting for admin approval after verification...</p>
+                    </div>
+                `;
+                return;
             }
             
-            initializeApp();
-            showToast('Demo mode active - Data saves to this browser only', 'info');
-        }
-
-        if (firebaseInitialized && auth) {
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    currentUser = user;
-                    isDemoMode = false;
-                    document.getElementById('authModal').classList.add('hidden');
-                    document.getElementById('mainApp').classList.remove('hidden');
-                    document.getElementById('userEmail').textContent = user.email;
-                    document.getElementById('demoBadge').classList.add('hidden');
-                    initializeApp();
-                } else if (!isDemoMode) {
-                    document.getElementById('authModal').classList.remove('hidden');
-                    document.getElementById('mainApp').classList.add('hidden');
+            // Check if user is approved by admin
+            try {
+                const approvalDoc = await db.collection('approvedUsers').doc(user.uid).get();
+                
+                if (!approvalDoc.exists || !approvalDoc.data().approved) {
+                    showToast('Your account is pending admin approval.', 'warning');
+                    await auth.signOut();
+                    
+                    // Show pending approval message
+                    document.getElementById('authForm').innerHTML = `
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl mx-auto mb-4">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3 class="text-lg font-bold mb-2">Pending Approval</h3>
+                            <p class="text-gray-600 mb-4">Your email is verified, but an administrator must approve your account before you can access the system.</p>
+                            <p class="text-sm text-gray-500 mb-4">Approval request sent for: <strong>${user.email}</strong></p>
+                            <button onclick="checkApprovalStatus('${user.uid}')" class="w-full py-2 bg-[#771414] text-white rounded-lg mb-2 hover:bg-[#5a1010]">
+                                Check Status
+                            </button>
+                            <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                Back to Login
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Create approval request in database
+                    await db.collection('approvalRequests').doc(user.uid).set({
+                        email: user.email,
+                        requestedAt: new Date().toISOString(),
+                        status: 'pending',
+                        uid: user.uid
+                    });
+                    
+                    return;
                 }
-            });
-        } else {
+                
+                // User is verified and approved - grant access
+                currentUser = user;
+                isDemoMode = false;
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('demoBadge').classList.add('hidden');
+                initializeApp();
+                showToast('Welcome! Account approved and verified.', 'success');
+                
+            } catch (err) {
+                console.error("Approval check failed:", err);
+                showToast('Error checking approval status. Please try again.', 'error');
+                await auth.signOut();
+            }
+            
+        } else if (!isDemoMode) {
+            // Reset auth form if not in demo mode
+            resetAuthForm();
             document.getElementById('authModal').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
         }
+    });
+} else {
+    document.getElementById('authModal').classList.remove('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+}
 
-        function signIn() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
+function resetAuthForm() {
+    document.getElementById('authForm').innerHTML = `
+        <input type="email" id="authEmail" placeholder="Email address" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-3 focus:border-[#771414] focus:outline-none">
+        <input type="password" id="authPassword" placeholder="Password" class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 mb-4 focus:border-[#771414] focus:outline-none">
+        
+        <button onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
+            Sign In
+        </button>
+        
+        <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
+            Create Account
+        </button>
+        
+        <div class="relative mb-4">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white text-gray-500">or</span>
+            </div>
+        </div>
+        
+        <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
+            <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
+        </button>
+        
+        <p class="text-xs text-center text-gray-400 mt-4">
+            Demo mode stores data locally on your device. No account required.
+        </p>
+    `;
+}
+
+async function resendVerificationEmail(email) {
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            await user.sendEmailVerification();
+            showToast('Verification email resent!', 'success');
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    }
+}
+
+async function checkApprovalStatus(uid) {
+    try {
+        const doc = await db.collection('approvedUsers').doc(uid).get();
+        if (doc.exists && doc.data().approved) {
+            showToast('You have been approved! Please sign in again.', 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showToast('Still pending approval. Please check back later or contact admin.', 'warning');
+        }
+    } catch (err) {
+        showToast('Error checking status', 'error');
+    }
+}
+
+function signIn() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    if (auth) {
+        auth.signInWithEmailAndPassword(email, password)
+            .catch(error => {
+                showToast(error.message, 'error');
+            });
+    } else {
+        showToast('Firebase not configured. Please use Demo Mode.', 'info');
+        setTimeout(enterDemoMode, 1000);
+    }
+}
+
+async function signUp() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    if (auth) {
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             
-            if (!email || !password) {
-                showToast('Please enter email and password', 'error');
-                return;
-            }
-
-            if (auth) {
-                auth.signInWithEmailAndPassword(email, password)
-                    .catch(error => {
-                        showToast(error.message, 'error');
-                        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-                            setTimeout(() => {
-                                if (confirm('Login failed. Would you like to continue in Demo Mode instead?')) {
-                                    enterDemoMode();
-                                }
-                            }, 500);
-                        }
-                    });
-            } else {
-                showToast('Firebase not configured. Please use Demo Mode.', 'info');
-                setTimeout(enterDemoMode, 1000);
-            }
-        }
-
-        function signUp() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
+            // Send verification email immediately
+            await userCredential.user.sendEmailVerification();
             
-            if (!email || !password) {
-                showToast('Please enter email and password', 'error');
-                return;
-            }
-
-            if (password.length < 6) {
-                showToast('Password must be at least 6 characters', 'error');
-                return;
-            }
-
-            if (auth) {
-                auth.createUserWithEmailAndPassword(email, password)
-                    .then(() => showToast('Account created successfully!', 'success'))
-                    .catch(error => {
-                        showToast(error.message, 'error');
-                        setTimeout(() => {
-                            if (confirm('Account creation failed. Continue in Demo Mode?')) {
-                                enterDemoMode();
-                            }
-                        }, 500);
-                    });
-            } else {
-                showToast('Cannot create account - Firebase not configured', 'error');
-                setTimeout(enterDemoMode, 1000);
-            }
+            showToast('Account created! Please verify your email.', 'success');
+            
+            // Show verification waiting screen
+            document.getElementById('authForm').innerHTML = `
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl mx-auto mb-4">
+                        <i class="fas fa-envelope-open-text"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">Verify Your Email</h3>
+                    <p class="text-gray-600 mb-4">We've sent a verification link to <strong>${email}</strong>.</p>
+                    <p class="text-sm text-gray-500 mb-4">After verifying, an administrator must approve your account before you can access the system.</p>
+                    <button onclick="resendVerificationEmail('${email}')" class="w-full py-2 bg-blue-600 text-white rounded-lg mb-2 hover:bg-blue-700">
+                        Resend Verification Email
+                    </button>
+                    <button onclick="location.reload()" class="w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        Back to Login
+                    </button>
+                </div>
+            `;
+            
+        } catch (error) {
+            showToast(error.message, 'error');
         }
+    } else {
+        showToast('Cannot create account - Firebase not configured', 'error');
+        setTimeout(enterDemoMode, 1000);
+    }
+}
 
-        function signOut() {
-            if (isDemoMode) {
-                if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
-                    isDemoMode = false;
-                    currentUser = null;
-                    document.getElementById('authModal').classList.remove('hidden');
-                    document.getElementById('mainApp').classList.add('hidden');
-                    document.getElementById('demoBadge').classList.add('hidden');
-                }
-            } else if (auth) {
-                auth.signOut();
-            }
+function signOut() {
+    if (isDemoMode) {
+        if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
+            isDemoMode = false;
+            currentUser = null;
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('demoBadge').classList.add('hidden');
+            resetAuthForm();
         }
+    } else if (auth) {
+        auth.signOut();
+        resetAuthForm();
+    }
+}
 
         // ==================== APP INITIALIZATION ====================
         
@@ -2249,6 +2450,430 @@ const firebaseConfig = {
         document.getElementById('interactionModal').addEventListener('click', function(e) {
             if (e.target === this) closeInteractionModal();
         });
+// ==================== ADMIN FUNCTIONS ====================
+
+let isAdmin = false;
+
+async function checkIfAdmin() {
+    if (!currentUser) return false;
+    // Replace with your actual admin email
+    isAdmin = currentUser.email === "james.s.gray1992@gmail.com";
+    return isAdmin;
+}
+
+async function showAdminPanel() {
+    if (!await checkIfAdmin()) {
+        showToast('Access denied. Admin only.', 'error');
+        return;
+    }
+    
+    document.getElementById('adminPanel').classList.remove('hidden');
+    loadPendingApprovals();
+    loadApprovedUsers();
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminPanel').classList.add('hidden');
+}
+
+async function loadPendingApprovals() {
+    try {
+        const snapshot = await db.collection('approvalRequests')
+            .where('status', '==', 'pending')
+            .orderBy('requestedAt', 'desc')
+            .get();
+        
+        const container = document.getElementById('pendingApprovalsList');
+        
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
+                    <p>No pending approval requests</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
+            return `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                <div>
+                    <div class="font-semibold text-gray-900">${data.email}</div>
+                    <div class="text-sm text-gray-500">Requested: ${date}</div>
+                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                        <i class="fas fa-check mr-1"></i> Approve
+                    </button>
+                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                        <i class="fas fa-times mr-1"></i> Reject
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error("Error loading approvals:", err);
+        document.getElementById('pendingApprovalsList').innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                <p>Error loading requests. Check permissions.</p>
+            </div>
+        `;
+    }
+}
+
+async function loadApprovedUsers() {
+    try {
+        const snapshot = await db.collection('approvedUsers')
+            .where('approved', '==', true)
+            .orderBy('approvedAt', 'desc')
+            .get();
+        
+        const container = document.getElementById('approvedUsersList');
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
+            return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
+            return `
+            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
+                <div>
+                    <div class="font-medium text-gray-900">${data.email}</div>
+                    <div class="text-xs text-green-700">Approved: ${date}</div>
+                </div>
+                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fas fa-user-times"></i> Revoke
+                </button>
+            </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error("Error loading approved users:", err);
+    }
+}
+
+async function approveUser(uid, email) {
+    try {
+        // Add to approved users
+        await db.collection('approvedUsers').doc(uid).set({
+            email: email,
+            approved: true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.email
+        });
+        
+        // Update request status
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'approved',
+            approvedAt: new Date().toISOString()
+        });
+        
+        showToast(`Approved ${email}`, 'success');
+        loadPendingApprovals();
+        loadApprovedUsers();
+        
+    } catch (err) {
+        showToast('Error approving user: ' + err.message, 'error');
+    }
+}
+
+async function rejectUser(uid) {
+    if (!confirm('Are you sure you want to reject this user?')) return;
+    
+    try {
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'rejected',
+            rejectedAt: new Date().toISOString()
+        });
+        
+        showToast('User rejected', 'info');
+        loadPendingApprovals();
+        
+    } catch (err) {
+        showToast('Error rejecting user: ' + err.message, 'error');
+    }
+}
+
+async function revokeAccess(uid) {
+    if (!confirm('Are you sure you want to revoke this user\'s access?')) return;
+    
+    try {
+        await db.collection('approvedUsers').doc(uid).update({
+            approved: false,
+            revokedAt: new Date().toISOString(),
+            revokedBy: currentUser.email
+        });
+        
+        showToast('Access revoked', 'success');
+        loadApprovedUsers();
+        
+    } catch (err) {
+        showToast('Error revoking access: ' + err.message, 'error');
+    }
+}
     </script>
+<!-- Admin Panel (Only visible to admin) -->
+<div id="adminPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+            <h3 class="text-xl font-bold display-font flex items-center">
+                <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Approval Panel
+            </h3>
+            <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <div class="mb-6">
+                <h4 class="font-semibold text-gray-900 mb-2">Pending Approval Requests</h4>
+                <p class="text-sm text-gray-500">Review and approve new user registrations</p>
+            </div>
+            
+            <div id="pendingApprovalsList" class="space-y-4">
+                <div class="text-center py-8 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Loading requests...</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t">
+                <h4 class="font-semibold text-gray-900 mb-2">Approved Users</h4>
+                <div id="approvedUsersList" class="space-y-2">
+                    <div class="text-center py-4 text-gray-400">
+                        <p>Loading approved users...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+// ==================== ADMIN FUNCTIONS ====================
+
+let isAdmin = false;
+
+async function checkIfAdmin() {
+    if (!currentUser) return false;
+    // Check if current user is admin (you)
+    isAdmin = currentUser.email === "james.s.gray1992@gmail.com"; // Replace with your email
+    return isAdmin;
+}
+
+async function showAdminPanel() {
+    if (!await checkIfAdmin()) {
+        showToast('Access denied. Admin only.', 'error');
+        return;
+    }
+    
+    document.getElementById('adminPanel').classList.remove('hidden');
+    loadPendingApprovals();
+    loadApprovedUsers();
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminPanel').classList.add('hidden');
+}
+
+async function loadPendingApprovals() {
+    try {
+        const snapshot = await db.collection('approvalRequests')
+            .where('status', '==', 'pending')
+            .orderBy('requestedAt', 'desc')
+            .get();
+        
+        const container = document.getElementById('pendingApprovalsList');
+        
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
+                    <p>No pending approval requests</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
+            return `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                <div>
+                    <div class="font-semibold text-gray-900">${data.email}</div>
+                    <div class="text-sm text-gray-500">Requested: ${date}</div>
+                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                        <i class="fas fa-check mr-1"></i> Approve
+                    </button>
+                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                        <i class="fas fa-times mr-1"></i> Reject
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error("Error loading approvals:", err);
+        document.getElementById('pendingApprovalsList').innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                <p>Error loading requests. Check permissions.</p>
+            </div>
+        `;
+    }
+}
+
+async function loadApprovedUsers() {
+    try {
+        const snapshot = await db.collection('approvedUsers')
+            .where('approved', '==', true)
+            .orderBy('approvedAt', 'desc')
+            .get();
+        
+        const container = document.getElementById('approvedUsersList');
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
+            return;
+        }
+        
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
+            return `
+            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
+                <div>
+                    <div class="font-medium text-gray-900">${data.email}</div>
+                    <div class="text-xs text-green-700">Approved: ${date}</div>
+                </div>
+                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fas fa-user-times"></i> Revoke
+                </button>
+            </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error("Error loading approved users:", err);
+    }
+}
+
+async function approveUser(uid, email) {
+    try {
+        // Add to approved users
+        await db.collection('approvedUsers').doc(uid).set({
+            email: email,
+            approved: true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.email
+        });
+        
+        // Update request status
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'approved',
+            approvedAt: new Date().toISOString()
+        });
+        
+        showToast(`Approved ${email}`, 'success');
+        loadPendingApprovals();
+        loadApprovedUsers();
+        
+    } catch (err) {
+        showToast('Error approving user: ' + err.message, 'error');
+    }
+}
+
+async function rejectUser(uid) {
+    if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
+        return;
+    }
+    
+    try {
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'rejected',
+            rejectedAt: new Date().toISOString()
+        });
+        
+        showToast('User rejected', 'info');
+        loadPendingApprovals();
+        
+    } catch (err) {
+        showToast('Error rejecting user: ' + err.message, 'error');
+    }
+}
+
+async function revokeAccess(uid) {
+    if (!confirm('Are you sure you want to revoke this user\'s access?')) {
+        return;
+    }
+    
+    try {
+        await db.collection('approvedUsers').doc(uid).update({
+            approved: false,
+            revokedAt: new Date().toISOString(),
+            revokedBy: currentUser.email
+        });
+        
+        showToast('Access revoked', 'success');
+        loadApprovedUsers();
+        
+    } catch (err) {
+        showToast('Error revoking access: ' + err.message, 'error');
+    }
+}
+        <!-- Admin Panel (Only visible to admin) -->
+        <div id="adminPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                    <h3 class="text-xl font-bold display-font flex items-center">
+                        <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Approval Panel
+                    </h3>
+                    <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-gray-900 mb-2">Pending Approval Requests</h4>
+                        <p class="text-sm text-gray-500">Review and approve new user registrations</p>
+                    </div>
+                    
+                    <div id="pendingApprovalsList" class="space-y-4">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>Loading requests...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-6 border-t">
+                        <h4 class="font-semibold text-gray-900 mb-2">Approved Users</h4>
+                        <div id="approvedUsersList" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400">
+                                <p>Loading approved users...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
 </body>
 </html>
