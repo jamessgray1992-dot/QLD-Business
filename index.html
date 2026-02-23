@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,7 +85,6 @@
             transform: translateY(0);
         }
         
-        /* Custom scrollbar for region list */
         .region-scroll::-webkit-scrollbar {
             height: 6px;
         }
@@ -146,6 +142,15 @@
             background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
             border: 1px solid #e5e7eb;
         }
+        
+        .demo-badge {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="text-gray-800 min-h-screen">
@@ -164,7 +169,6 @@
                 </div>
                 <h2 class="text-2xl font-bold display-font">QLD Business Report</h2>
                 <p class="text-gray-500 mt-2">All 77 Local Government Areas</p>
-                <p class="text-xs text-gray-400 mt-1">Sign in to access your data</p>
             </div>
             
             <div id="authForm">
@@ -175,18 +179,31 @@
                     Sign In
                 </button>
                 
-                <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors">
+                <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
                     Create Account
                 </button>
                 
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                </div>
+                
+                <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
+                </button>
+                
                 <p class="text-xs text-center text-gray-400 mt-4">
-                    Demo mode available without registration
+                    Demo mode stores data locally on your device. No account required.
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Main App (Hidden until auth) -->
+    <!-- Main App (Hidden until auth or demo) -->
     <div id="mainApp" class="hidden">
         
         <!-- Navigation -->
@@ -201,9 +218,10 @@
                             <h1 class="text-xl font-bold text-gray-900 display-font tracking-tight">Business Development Report</h1>
                             <div class="flex items-center space-x-2 text-xs text-gray-500">
                                 <span id="userEmail"></span>
+                                <span id="demoBadge" class="hidden demo-badge">DEMO MODE</span>
                                 <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
                                 <span id="syncStatus" class="flex items-center text-green-600">
-                                    <i class="fas fa-check-circle mr-1"></i> Synced
+                                    <i class="fas fa-check-circle mr-1"></i> Ready
                                 </span>
                                 <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
                                 <span class="text-[#771414] font-semibold">77 LGAs</span>
@@ -530,7 +548,7 @@
             { id: 'cook', name: 'Cook Shire Council', type: 'Shire', population: '4K', zone: 'FWQ', region: 'Cape York' },
             { id: 'croydon', name: 'Croydon Shire Council', type: 'Shire', population: '300', zone: 'FWQ', region: 'Gulf' },
             { id: 'etheridge', name: 'Etheridge Shire Council', type: 'Shire', population: '900', zone: 'FWQ', region: 'Gulf' },
-            { id: ' Hopevale', name: 'Hope Vale Aboriginal Shire Council', type: 'Aboriginal Shire', population: '1K', zone: 'FWQ', region: 'Cape York' },
+            { id: 'hopevale', name: 'Hope Vale Aboriginal Shire Council', type: 'Aboriginal Shire', population: '1K', zone: 'FWQ', region: 'Cape York' },
             { id: 'kowanyama', name: 'Kowanyama Aboriginal Shire Council', type: 'Aboriginal Shire', population: '1K', zone: 'FWQ', region: 'Cape York' },
             { id: 'lockhartriver', name: 'Lockhart River Aboriginal Shire Council', type: 'Aboriginal Shire', population: '700', zone: 'FWQ', region: 'Cape York' },
             { id: 'mapoon', name: 'Mapoon Aboriginal Shire Council', type: 'Aboriginal Shire', population: '400', zone: 'FWQ', region: 'Cape York' },
@@ -546,7 +564,7 @@
         ];
 
         // ==================== FIREBASE CONFIGURATION ====================
-       // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        // NOTE: Leave this as-is for demo mode to work automatically
 const firebaseConfig = {
   apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
   authDomain: "queensland-business-reporting.firebaseapp.com",
@@ -555,48 +573,89 @@ const firebaseConfig = {
   messagingSenderId: "271437640355",
   appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
   measurementId: "G-XE0LCMYLC5"
-};
+        };
 
-        let db, auth;
+        let db = null;
+        let auth = null;
         let isOnline = navigator.onLine;
         let currentUser = null;
+        let isDemoMode = false;
         let unsubscribe = null;
         let currentZone = 'all';
 
-        try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                auth = firebase.auth();
-                db.enablePersistence({ synchronizeTabs: true }).catch(err => console.log("Persistence failed:", err));
+        // Initialize Firebase only if properly configured
+        function initializeFirebase() {
+            try {
+                if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey !== "") {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    auth = firebase.auth();
+                    
+                    // Enable offline persistence
+                    db.enablePersistence({ synchronizeTabs: true })
+                        .catch(err => console.log("Persistence failed:", err));
+                    
+                    return true;
+                }
+            } catch (e) {
+                console.log("Firebase initialization failed:", e);
             }
-        } catch (e) {
-            console.log("Firebase not initialized:", e);
+            return false;
         }
+
+        const firebaseInitialized = initializeFirebase();
 
         let database = { tenders: [], awarded: [], contacts: [] };
         let currentRegion = 'brisbane';
 
-        // ==================== AUTHENTICATION ====================
+        // ==================== AUTHENTICATION & DEMO MODE ====================
         
-        if (auth) {
+        function enterDemoMode() {
+            isDemoMode = true;
+            currentUser = { email: 'Demo User', uid: 'demo-' + Date.now() };
+            
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = 'Demo Mode';
+            document.getElementById('demoBadge').classList.remove('hidden');
+            
+            // Load from localStorage if available
+            const saved = localStorage.getItem('qldBusinessData_demo');
+            if (saved) {
+                try {
+                    database = JSON.parse(saved);
+                    showToast('Loaded your saved demo data', 'success');
+                } catch (e) {
+                    loadSampleData();
+                }
+            } else {
+                loadSampleData();
+            }
+            
+            initializeApp();
+            showToast('Demo mode active - Data saves to this browser only', 'info');
+        }
+
+        if (firebaseInitialized && auth) {
             auth.onAuthStateChanged(user => {
                 if (user) {
                     currentUser = user;
+                    isDemoMode = false;
                     document.getElementById('authModal').classList.add('hidden');
                     document.getElementById('mainApp').classList.remove('hidden');
                     document.getElementById('userEmail').textContent = user.email;
+                    document.getElementById('demoBadge').classList.add('hidden');
                     initializeApp();
-                } else {
+                } else if (!isDemoMode) {
+                    // Only show auth modal if not in demo mode
                     document.getElementById('authModal').classList.remove('hidden');
                     document.getElementById('mainApp').classList.add('hidden');
                 }
             });
         } else {
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('userEmail').textContent = 'Demo Mode';
-            initializeApp();
+            // No Firebase - show auth modal with demo option
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
         }
 
         function signIn() {
@@ -610,12 +669,20 @@ const firebaseConfig = {
 
             if (auth) {
                 auth.signInWithEmailAndPassword(email, password)
-                    .catch(error => showToast(error.message, 'error'));
+                    .catch(error => {
+                        showToast(error.message, 'error');
+                        // If auth fails, offer demo mode
+                        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+                            setTimeout(() => {
+                                if (confirm('Login failed. Would you like to continue in Demo Mode instead?')) {
+                                    enterDemoMode();
+                                }
+                            }, 500);
+                        }
+                    });
             } else {
-                showToast('Firebase not configured. Using demo mode.', 'info');
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                initializeApp();
+                showToast('Firebase not configured. Please use Demo Mode.', 'info');
+                setTimeout(enterDemoMode, 1000);
             }
         }
 
@@ -628,15 +695,40 @@ const firebaseConfig = {
                 return;
             }
 
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+
             if (auth) {
                 auth.createUserWithEmailAndPassword(email, password)
-                    .then(() => showToast('Account created!', 'success'))
-                    .catch(error => showToast(error.message, 'error'));
+                    .then(() => showToast('Account created successfully!', 'success'))
+                    .catch(error => {
+                        showToast(error.message, 'error');
+                        // If auth fails, offer demo mode
+                        setTimeout(() => {
+                            if (confirm('Account creation failed. Continue in Demo Mode?')) {
+                                enterDemoMode();
+                            }
+                        }, 500);
+                    });
+            } else {
+                showToast('Cannot create account - Firebase not configured', 'error');
+                setTimeout(enterDemoMode, 1000);
             }
         }
 
         function signOut() {
-            if (auth) {
+            if (isDemoMode) {
+                // Clear demo data from memory but keep in localStorage
+                if (confirm('Sign out of Demo Mode? Your data will remain saved in this browser.')) {
+                    isDemoMode = false;
+                    currentUser = null;
+                    document.getElementById('authModal').classList.remove('hidden');
+                    document.getElementById('mainApp').classList.add('hidden');
+                    document.getElementById('demoBadge').classList.add('hidden');
+                }
+            } else if (auth) {
                 auth.signOut();
             }
         }
@@ -646,19 +738,22 @@ const firebaseConfig = {
         function initializeApp() {
             renderRegionTabs();
             
-            if (db && currentUser) {
+            if (!isDemoMode && db && currentUser) {
+                // Real-time sync with Firestore
                 setupRealtimeSync();
             } else {
-                loadSampleData();
+                // Demo mode or no Firebase
+                if (!isDemoMode) loadSampleData();
                 loadRegion(currentRegion);
                 updateStats();
             }
             
+            // Monitor online status
             window.addEventListener('online', () => {
                 isOnline = true;
                 document.getElementById('offlineBanner').classList.remove('show');
                 showToast('Back online', 'success');
-                updateSyncStatus('Synced');
+                updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
             });
             
             window.addEventListener('offline', () => {
@@ -701,10 +796,49 @@ const firebaseConfig = {
                         status: 'Open',
                         contact: { name: 'Sarah Mitchell', position: 'Senior Procurement Officer', email: 's.mitchell@brisbane.qld.gov.au', phone: '(07) 3403 8888' },
                         createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        regionId: 'goldcoast',
+                        title: 'Beachfront Revitalisation Project',
+                        category: 'Construction',
+                        value: '$8M',
+                        closingDate: '2024-12-20',
+                        priority: 'High',
+                        description: 'Boardwalk reconstruction and beach amenity upgrades.',
+                        status: 'Open',
+                        contact: { name: 'James Chen', position: 'Infrastructure Manager', email: 'j.chen@goldcoast.qld.gov.au', phone: '(07) 5581 6984' },
+                        createdAt: new Date().toISOString()
                     }
                 ],
-                awarded: [],
-                contacts: []
+                awarded: [
+                    {
+                        id: 101,
+                        regionId: 'brisbane',
+                        title: 'City Botanic Gardens Restoration',
+                        category: 'Environmental',
+                        value: '$1.2M',
+                        awardedDate: '2024-02-01',
+                        awardedTo: 'GreenSpace Constructions Pty Ltd',
+                        description: 'Heritage listed gardens restoration.',
+                        contact: { name: 'Michael Torres', position: 'Project Director', email: 'm.torres@brisbane.qld.gov.au', phone: '(07) 3403 8888' },
+                        createdAt: new Date().toISOString()
+                    }
+                ],
+                contacts: [
+                    {
+                        id: 201,
+                        regionId: 'brisbane',
+                        name: 'Sarah Mitchell',
+                        position: 'Senior Procurement Officer',
+                        department: 'Infrastructure & Transport',
+                        email: 's.mitchell@brisbane.qld.gov.au',
+                        phone: '(07) 3403 8888',
+                        mobile: '0400 123 456',
+                        notes: 'Preferred contact for civil works tenders',
+                        lastContact: '2024-02-15'
+                    }
+                ]
             };
         }
 
@@ -1034,7 +1168,16 @@ const firebaseConfig = {
                 });
             }
             
-            if (db && currentUser) {
+            // Save to appropriate storage
+            if (isDemoMode) {
+                // Save to localStorage for demo mode
+                try {
+                    localStorage.setItem('qldBusinessData_demo', JSON.stringify(database));
+                    showToast('Saved to Demo Mode (browser storage)', 'success');
+                } catch (e) {
+                    showToast('Error saving: Storage may be full', 'error');
+                }
+            } else if (db && currentUser) {
                 try {
                     await db.collection('users').doc(currentUser.uid).set(database);
                     showToast('Saved successfully!', 'success');
@@ -1043,7 +1186,7 @@ const firebaseConfig = {
                     return;
                 }
             } else {
-                showToast('Saved locally (Firebase not configured)', 'info');
+                showToast('Saved locally', 'info');
             }
             
             closeModal();
@@ -1081,9 +1224,9 @@ const firebaseConfig = {
 
         function updateSyncStatus(status) {
             const indicator = document.getElementById('syncStatus');
-            if (status === 'Synced') {
-                indicator.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Synced';
-                indicator.className = 'flex items-center text-green-600';
+            if (status === 'Synced' || status === 'Demo Mode') {
+                indicator.innerHTML = `<i class="fas ${isDemoMode ? 'fa-flask' : 'fa-check-circle'} mr-1"></i> ${status}`;
+                indicator.className = isDemoMode ? 'flex items-center text-amber-600' : 'flex items-center text-green-600';
             } else if (status === 'Offline') {
                 indicator.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
                 indicator.className = 'flex items-center text-orange-600';
@@ -1100,14 +1243,12 @@ const firebaseConfig = {
                 return;
             }
             
-            // Search across all regions
             const filteredTenders = database.tenders.filter(t => 
                 t.title.toLowerCase().includes(query) || 
                 t.category.toLowerCase().includes(query) ||
                 t.contact.name.toLowerCase().includes(query)
             );
             
-            // Show results from all regions
             document.getElementById('regionContent').innerHTML = `
                 <div class="glass-panel rounded-2xl p-6 mb-6">
                     <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
@@ -1184,13 +1325,35 @@ const firebaseConfig = {
             const colors = {
                 success: 'bg-green-500',
                 error: 'bg-red-500',
-                info: 'bg-blue-500'
+                info: 'bg-blue-500',
+                warning: 'bg-amber-500'
             };
             
-            toast.className = `toast ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
+            toast.className = `toast ${colors[type] || colors.info} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
             toast.innerHTML = `
-                <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
                 <span>${message}</span>
             `;
             
-            container.appendChild(toast
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        // Close modal on outside click
+        document.getElementById('entryModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>
