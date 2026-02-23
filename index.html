@@ -1381,10 +1381,6 @@ if (firebaseInitialized && auth) {
         }
     });
 }
-         else {
-            document.getElementById('authModal').classList.remove('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
-        }
 
         function resetAuthForm() {
             document.getElementById('authForm').innerHTML = `
@@ -1436,7 +1432,34 @@ if (firebaseInitialized && auth) {
                 } else {
                     showToast('Error: ' + err.message, 'error');
                 }
+}
         }
+async function checkVerificationAndContinue() {
+    try {
+        await auth.currentUser.reload();
+        const refreshedUser = auth.currentUser;
+        
+        if (refreshedUser.emailVerified) {
+            showToast('Email verified! Continuing...', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToast('Email not yet verified. Please check your inbox and click the link.', 'warning');
+        }
+    } catch (err) {
+        showToast('Error checking verification status', 'error');
+    }
+}
+
+function signOutAndReset() {
+    auth.signOut().then(() => {
+        resetAuthForm();
+        document.getElementById('authModal').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+    });
+}
+
         async function checkApprovalStatus(uid) {
             try {
                 const doc = await db.collection('approvedUsers').doc(uid).get();
