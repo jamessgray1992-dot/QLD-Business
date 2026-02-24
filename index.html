@@ -1330,8 +1330,33 @@ async function saveData() {
     }
     
     updateSyncStatus('Syncing...');
-    // In real implementation, save to Firestore here
-    setTimeout(() => updateSyncStatus('Synced'), 500);
+    
+    try {
+        // Save all tenders to Firestore
+        for (const tender of database.tenders) {
+            const tenderRef = db.collection('tenders').doc(String(tender.id));
+            await tenderRef.set(tender);
+        }
+        
+        // Save all contacts to Firestore
+        for (const contact of database.crmContacts) {
+            const contactRef = db.collection('crmContacts').doc(String(contact.id));
+            await contactRef.set(contact);
+        }
+        
+        // Save all interactions to Firestore
+        for (const interaction of database.interactions) {
+            const interactionRef = db.collection('interactions').doc(String(interaction.id));
+            await interactionRef.set(interaction);
+        }
+        
+        updateSyncStatus('Synced');
+        console.log('Data saved to Firebase');
+    } catch (error) {
+        console.error('Error saving data:', error);
+        updateSyncStatus('Error');
+        showToast('Error saving data: ' + error.message, 'error');
+    }
 }
 
 // ==================== UI INITIALIZATION ====================
@@ -2422,6 +2447,7 @@ window.addEventListener('online', () => {
 </script>
 </body>
 </html>
+
 
 
 
