@@ -1105,9 +1105,102 @@ let database = {
     interactions: []
 };
 
+// ✅ ADD FIX 4 HERE - Safe Currency Parsing Functions:
+
+/**
+ * Safely parses a currency string to a number
+ * Handles: $1,000,000 | $500K | null | undefined | empty string
+ * Returns: number (0 if invalid)
+ */
+function parseCurrency(value) {
+    if (!value || typeof value !== 'string') return 0;
+    
+    // Remove all non-numeric characters except decimal point
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    
+    // Handle edge cases
+    if (!cleaned || cleaned === '.') return 0;
+    
+    // Parse and validate
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Safely sums tender values
+ * Replaces the buggy sumValues function
+ */
+function sumValues(tenders) {
+    if (!Array.isArray(tenders)) return 0;
+    return tenders.reduce((sum, t) => {
+        const val = parseCurrency(t?.value);
+        return sum + val;
+    }, 0);
+}
+
+/**
+ * Formats a number as currency string
+ */
+function formatCurrency(value) {
+    const num = parseFloat(value) || 0;
+    if (num >= 1000000) {
+        return '$' + (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return '$' + (num / 1000).toFixed(0) + 'K';
+    }
+    return '$' + num.toFixed(0);
+}
+
+// ✅ ADD FIX 5 HERE - Safe Date Formatting:
+
+/**
+ * Safely formats a date string to Australian format
+ * Handles: invalid dates, null, undefined, empty strings
+ * Returns: formatted string or empty string
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    
+    try {
+        const date = new Date(dateStr);
+        
+        // Check if valid date
+        if (isNaN(date.getTime())) return '';
+        
+        // Check for obviously wrong dates (like year 1970 from timestamp 0)
+        if (date.getFullYear() < 2000 || date.getFullYear() > 2100) return '';
+        
+        return date.toLocaleDateString('en-AU', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    } catch (e) {
+        console.warn('Date formatting error:', e);
+        return '';
+    }
+}
+
+/**
+ * Formats a date for input[type="date"] fields (YYYY-MM-DD)
+ */
+function formatDateForInput(dateStr) {
+    if (!dateStr) return '';
+    
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
+        
+        return date.toISOString().split('T')[0];
+    } catch (e) {
+        return '';
+    }
+}
+
 // Queensland Regions Data (77 LGAs)
 const qldRegions = [
-    // ==================== SOUTH EAST QUEENSLAND (SEQ) ====================
+    const qldRegions = [
+    // SOUTH EAST QUEENSLAND (SEQ) - 17 LGAs
     { id: 'SEQ-BCC', name: 'Brisbane City Council', zone: 'SEQ' },
     { id: 'SEQ-GC', name: 'Gold Coast City', zone: 'SEQ' },
     { id: 'SEQ-ISC', name: 'Ipswich City', zone: 'SEQ' },
@@ -1126,7 +1219,7 @@ const qldRegions = [
     { id: 'SEQ-NBRC', name: 'North Burnett Regional', zone: 'SEQ' },
     { id: 'SEQ-CRC', name: 'Cherbourg Aboriginal Shire', zone: 'SEQ' },
     
-    // ==================== NORTH QUEENSLAND (NQ) ====================
+    // NORTH QUEENSLAND (NQ) - 16 LGAs (REMOVED DUPLICATES)
     { id: 'NQ-TC', name: 'Townsville City', zone: 'NQ' },
     { id: 'NQ-CC', name: 'Cairns Regional', zone: 'NQ' },
     { id: 'NQ-MRC', name: 'Mackay Regional', zone: 'NQ' },
@@ -1136,25 +1229,22 @@ const qldRegions = [
     { id: 'NQ-HS', name: 'Hinchinbrook Shire', zone: 'NQ' },
     { id: 'NQ-ICC', name: 'Isaac Regional', zone: 'NQ' },
     { id: 'NQ-BC', name: 'Bowen Shire', zone: 'NQ' },
-    { id: 'NQ-CCRC', name: 'Central Highlands Regional', zone: 'NQ' },
+    { id: 'NQ-CH', name: 'Central Highlands Regional', zone: 'NQ' }, // Fixed ID
     { id: 'NQ-WC', name: 'Winton Shire', zone: 'NQ' },
     { id: 'NQ-FC', name: 'Flinders Shire', zone: 'NQ' },
     { id: 'NQ-RM', name: 'Richmond Shire', zone: 'NQ' },
     { id: 'NQ-MC', name: 'McKinlay Shire', zone: 'NQ' },
-    { id: 'NQ-CC2', name: 'Carpentaria Shire', zone: 'NQ' },
-    { id: 'NQ-CRC', name: 'Croydon Shire', zone: 'NQ' },
+    { id: 'NQ-CAR', name: 'Carpentaria Shire', zone: 'NQ' }, // Fixed ID
+    { id: 'NQ-CRO', name: 'Croydon Shire', zone: 'NQ' }, // Fixed ID
     
-    // ==================== CENTRAL QUEENSLAND (CQ) ====================
+    // CENTRAL QUEENSLAND (CQ) - 6 LGAs (REMOVED DUPLICATES)
     { id: 'CQ-BRC', name: 'Bundaberg Regional', zone: 'CQ' },
-    { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ' },
+    { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ' }, // Only once now
     { id: 'CQ-GV', name: 'Gympie Regional', zone: 'CQ' },
     { id: 'CQ-FCRC', name: 'Fraser Coast Regional', zone: 'CQ' },
-    { id: 'CQ-BB', name: 'Banana Shire', zone: 'CQ' },
-    { id: 'CQ-NB', name: 'North Burnett Regional', zone: 'CQ' },
-    { id: 'CQ-SB', name: 'South Burnett Regional', zone: 'CQ' },
-    { id: 'CQ-GC', name: 'Gladstone Regional', zone: 'CQ' },
+    { id: 'CQ-BAN', name: 'Banana Shire', zone: 'CQ' }, // Fixed ID
     
-    // ==================== SOUTH WEST QUEENSLAND (SWQ) ====================
+    // SOUTH WEST QUEENSLAND (SWQ) - 10 LGAs
     { id: 'SWQ-WRC', name: 'Western Downs Regional', zone: 'SWQ' },
     { id: 'SWQ-MC', name: 'Maranoa Regional', zone: 'SWQ' },
     { id: 'SWQ-BS', name: 'Balonne Shire', zone: 'SWQ' },
@@ -1163,17 +1253,17 @@ const qldRegions = [
     { id: 'SWQ-PA', name: 'Paroo Shire', zone: 'SWQ' },
     { id: 'SWQ-QU', name: 'Quilpie Shire', zone: 'SWQ' },
     { id: 'SWQ-BA', name: 'Barcoo Shire', zone: 'SWQ' },
-    { id: 'SWQ-BB', name: 'Boulia Shire', zone: 'SWQ' },
+    { id: 'SWQ-BO', name: 'Boulia Shire', zone: 'SWQ' }, // Fixed ID
     { id: 'SWQ-DI', name: 'Diamantina Shire', zone: 'SWQ' },
     
-    // ==================== FAR NORTH QUEENSLAND (FNQ) ====================
+    // FAR NORTH QUEENSLAND (FNQ) - 19 LGAs (REMOVED DUPLICATES)
     { id: 'FNQ-TC', name: 'Tablelands Regional', zone: 'FNQ' },
     { id: 'FNQ-MC', name: 'Mareeba Shire', zone: 'FNQ' },
     { id: 'FNQ-DT', name: 'Douglas Shire', zone: 'FNQ' },
     { id: 'FNQ-CC', name: 'Cassowary Coast Regional', zone: 'FNQ' },
     { id: 'FNQ-AP', name: 'Aurukun Shire', zone: 'FNQ' },
     { id: 'FNQ-CK', name: 'Cook Shire', zone: 'FNQ' },
-    { id: 'FNQ-CM', name: 'Croydon Shire', zone: 'FNQ' },
+    // REMOVED: FNQ-CM (duplicate of NQ-CRO)
     { id: 'FNQ-EA', name: 'Etheridge Shire', zone: 'FNQ' },
     { id: 'FNQ-HP', name: 'Hope Vale Aboriginal Shire', zone: 'FNQ' },
     { id: 'FNQ-KO', name: 'Kowanyama Aboriginal Shire', zone: 'FNQ' },
@@ -1187,9 +1277,9 @@ const qldRegions = [
     { id: 'FNQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FNQ' },
     { id: 'FNQ-YA', name: 'Yarrabah Aboriginal Shire', zone: 'FNQ' },
     
-    // ==================== GULF COUNTRY ====================
+    // GULF COUNTRY - 4 LGAs (REMOVED DUPLICATES)
     { id: 'GULF-BS', name: 'Burke Shire', zone: 'GULF' },
-    { id: 'GULF-CS', name: 'Carpentaria Shire', zone: 'GULF' },
+    // REMOVED: GULF-CS (duplicate of NQ-CAR)
     { id: 'GULF-DO', name: 'Doomadgee Aboriginal Shire', zone: 'GULF' },
     { id: 'GULF-GC', name: 'Gregory Shire', zone: 'GULF' }
 ];
@@ -1433,7 +1523,7 @@ function initializeUI() {
 
 function renderRegionTabs() {
     const container = document.getElementById('regionTabs');
-    const zones = ['all', 'SEQ', 'NQ', 'CQ', 'SWQ', 'FWQ'];
+    const zones = ['all', 'SEQ', 'NQ', 'CQ', 'SWQ', 'FNQ', 'GULF']; // Fixed: FNQ not FWQ, added GULF
     
     container.innerHTML = qldRegions.map(region => `
         <button onclick="loadRegion('${region.id}')" 
@@ -2166,21 +2256,6 @@ function updateCRMStats() {
     document.getElementById('crmCompetitors').textContent = contacts.filter(c => c.category === 'Competitor').length;
 }
 
-function sumValues(tenders) {
-    return tenders.reduce((sum, t) => {
-        const val = parseFloat(t.value?.replace(/[^0-9.]/g, '')) || 0;
-        return sum + val;
-    }, 0);
-}
-
-function formatCurrency(value) {
-    if (value >= 1000000) {
-        return '$' + (value / 1000000).toFixed(1) + 'M';
-    } else if (value >= 1000) {
-        return '$' + (value / 1000).toFixed(0) + 'K';
-    }
-    return '$' + value;
-}
 
 function updateSyncStatus(status) {
     const indicator = document.getElementById('syncStatus');
@@ -2312,11 +2387,6 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 // ==================== ADMIN FUNCTIONS ====================
 
@@ -2487,26 +2557,206 @@ async function revokeAccess(uid) {
 }
 
 // Close modals on outside click
-document.getElementById('tenderModal').addEventListener('click', function(e) {
-    if (e.target === this) closeTenderModal();
-});
-document.getElementById('crmModal').addEventListener('click', function(e) {
-    if (e.target === this) closeCRMModal();
-});
-document.getElementById('interactionModal').addEventListener('click', function(e) {
-    if (e.target === this) closeInteractionModal();
-});
+// ✅ FIXED VERSION - Wrap in DOMContentLoaded:
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Tender form submission
+    const tenderForm = document.getElementById('tenderForm');
+    if (tenderForm) {
+        tenderForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('tenderId').value;
+            const status = document.getElementById('tenderStatus').value;
+            
+            const tenderData = {
+                regionId: document.getElementById('tenderRegion').value,
+                title: document.getElementById('tenderTitle').value,
+                category: document.getElementById('tenderCategory').value,
+                status: status,
+                value: document.getElementById('tenderValue').value,
+                closingDate: document.getElementById('tenderClosingDate').value,
+                description: document.getElementById('tenderDescription').value,
+                contact: {
+                    name: document.getElementById('tenderContactName').value,
+                    position: document.getElementById('tenderContactPosition').value,
+                    email: document.getElementById('tenderContactEmail').value,
+                    phone: document.getElementById('tenderContactPhone').value
+                },
+                updatedAt: new Date().toISOString()
+            };
+            
+            // Add status-specific fields
+            if (status === 'PRICED') {
+                tenderData.ourPrice = document.getElementById('ourPrice').value;
+                tenderData.submissionDate = document.getElementById('submissionDate').value;
+            } else if (status === 'NOT_PRICING') {
+                tenderData.notPricingReason = document.getElementById('notPricingReason').value;
+                tenderData.notPricingComments = document.getElementById('notPricingComments').value;
+            } else if (status === 'AWARDED') {
+                tenderData.awardedDate = document.getElementById('awardedDate').value;
+                tenderData.awardedValue = document.getElementById('awardedValue').value;
+                tenderData.awardedScope = document.getElementById('awardedScope').value;
+            } else if (status === 'NOT_WON') {
+                tenderData.winnerName = document.getElementById('winnerName').value;
+                tenderData.winnerPrice = document.getElementById('winnerPrice').value;
+                tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
+                tenderData.resultDate = document.getElementById('resultDate').value;
+                tenderData.notWonComments = document.getElementById('notWonComments').value;
+            }
+            
+            if (id) {
+                const index = database.tenders.findIndex(t => t.id == id);
+                if (index !== -1) {
+                    tenderData.id = parseInt(id);
+                    tenderData.createdAt = database.tenders[index].createdAt;
+                    database.tenders[index] = tenderData;
+                }
+            } else {
+                tenderData.id = Date.now();
+                tenderData.createdAt = new Date().toISOString();
+                tenderData.createdBy = currentUser?.email || 'demo';
+                database.tenders.push(tenderData);
+            }
+            
+            await saveData();
+            closeTenderModal();
+            loadRegion(tenderData.regionId);
+            updateAllStats();
+            showToast('Tender saved successfully!', 'success');
+        });
+    }
 
-// Offline detection
-window.addEventListener('offline', () => {
-    document.getElementById('offlineBanner').classList.add('show');
-    updateSyncStatus('Offline');
-});
+    // CRM form submission
+    const crmForm = document.getElementById('crmForm');
+    if (crmForm) {
+        crmForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-window.addEventListener('online', () => {
-    document.getElementById('offlineBanner').classList.remove('show');
-    updateSyncStatus('Synced');
-});    
+            const id = document.getElementById('crmContactId').value;
+            const category = document.getElementById('crmCategory').value;
+
+            if (category === 'Council' && !document.getElementById('crmRegion').value) {
+                showToast('Please select a region for Council contacts', 'error');
+                return;
+            }
+
+            const contactData = {
+                category: category,
+                regionId: document.getElementById('crmRegion').value,
+                type: document.getElementById('crmType').value,
+                name: document.getElementById('crmName').value,
+                position: document.getElementById('crmPosition').value,
+                department: document.getElementById('crmDepartment').value,
+                directPhone: document.getElementById('crmDirectPhone').value,
+                mobile: document.getElementById('crmMobile').value,
+                email: document.getElementById('crmEmail').value,
+                linkedIn: document.getElementById('crmLinkedIn').value,
+                notes: document.getElementById('crmNotes').value,
+                lastContactDate: document.getElementById('crmLastContactDate').value,
+                lastContactType: document.getElementById('crmLastContactType').value,
+                lastContactNotes: document.getElementById('crmLastContactNotes').value,
+                followUpDate: document.getElementById('crmFollowUpDate').value,
+                priority: document.getElementById('crmPriority').value,
+                updatedAt: new Date().toISOString(),
+                updatedBy: currentUser?.email || currentUser?.uid || 'demo'
+            };
+
+            if (id) {
+                const index = database.crmContacts.findIndex(c => c.id == id);
+                if (index !== -1) {
+                    contactData.id = parseInt(id);
+                    contactData.interactions = database.crmContacts[index].interactions || [];
+                    contactData.createdAt = database.crmContacts[index].createdAt;
+                    contactData.createdBy = database.crmContacts[index].createdBy;
+                    database.crmContacts[index] = contactData;
+                }
+            } else {
+                contactData.id = Date.now();
+                contactData.interactions = [];
+                contactData.createdAt = new Date().toISOString();
+                contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
+                database.crmContacts.push(contactData);
+            }
+
+            await saveData();
+            closeCRMModal();
+            renderCRMContacts();
+            updateAllStats();
+            showToast('Contact saved successfully!', 'success');
+        });
+    }
+
+    // Interaction form submission
+    const interactionForm = document.getElementById('interactionForm');
+    if (interactionForm) {
+        interactionForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const contactId = parseInt(document.getElementById('interactionContactId').value);
+
+            const interaction = {
+                id: Date.now(),
+                contactId: contactId,
+                date: document.getElementById('interactionDate').value,
+                type: document.getElementById('interactionType').value,
+                notes: document.getElementById('interactionNotes').value,
+                nextSteps: document.getElementById('interactionNextSteps').value,
+                createdAt: new Date().toISOString()
+            };
+
+            if (!database.interactions) database.interactions = [];
+            database.interactions.push(interaction);
+
+            const contact = database.crmContacts.find(c => c.id === contactId);
+            if (contact) {
+                contact.lastContactDate = interaction.date;
+                contact.lastContactType = interaction.type;
+                contact.lastContactNotes = interaction.notes;
+            }
+
+            await saveData();
+            closeInteractionModal();
+            renderCRMContacts();
+            showToast('Interaction added!', 'success');
+        });
+    }
+
+    // Modal close on outside click
+    const tenderModal = document.getElementById('tenderModal');
+    if (tenderModal) {
+        tenderModal.addEventListener('click', function(e) {
+            if (e.target === this) closeTenderModal();
+        });
+    }
+    
+    const crmModal = document.getElementById('crmModal');
+    if (crmModal) {
+        crmModal.addEventListener('click', function(e) {
+            if (e.target === this) closeCRMModal();
+        });
+    }
+    
+    const interactionModal = document.getElementById('interactionModal');
+    if (interactionModal) {
+        interactionModal.addEventListener('click', function(e) {
+            if (e.target === this) closeInteractionModal();
+        });
+    }
+
+    // Offline detection
+    window.addEventListener('offline', () => {
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.classList.add('show');
+        updateSyncStatus('Offline');
+    });
+
+    window.addEventListener('online', () => {
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.classList.remove('show');
+        updateSyncStatus('Synced');
+    });
+});
 </script>
 </body>
 </html>
