@@ -1066,216 +1066,756 @@
     </div>
 <!-- Add this in the <head> section, BEFORE your other scripts -->
 <script>
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
-  authDomain: "queensland-business-reporting.firebaseapp.com",
-  projectId: "queensland-business-reporting",
-  storageBucket: "queensland-business-reporting.firebasestorage.app",
-  messagingSenderId: "271437640355",
-  appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
-  measurementId: "G-XE0LCMYLC5"
+// ==================== GLOBAL VARIABLES ====================
+let currentUser = null;
+let isDemoMode = false;
+let currentRegion = null;
+let currentMainTab = 'tenders';
+let database = {
+    tenders: [],
+    crmContacts: [],
+    interactions: []
+};
+
+// Queensland Regions Data (77 LGAs)
+const qldRegions = [
+    { id: 'SEQ-BCC', name: 'Brisbane City Council', zone: 'SEQ' },
+    { id: 'SEQ-GC', name: 'Gold Coast City', zone: 'SEQ' },
+    { id: 'SEQ-ISC', name: 'Ipswich City', zone: 'SEQ' },
+    { id: 'SEQ-LCC', name: 'Logan City', zone: 'SEQ' },
+    { id: 'SEQ-MRCC', name: 'Moreton Bay Regional', zone: 'SEQ' },
+    { id: 'SEQ-RRC', name: 'Redland City', zone: 'SEQ' },
+    { id: 'SEQ-SC', name: 'Sunshine Coast Regional', zone: 'SEQ' },
+    { id: 'SEQ-TC', name: 'Toowoomba Regional', zone: 'SEQ' },
+    { id: 'NQ-TC', name: 'Townsville City', zone: 'NQ' },
+    { id: 'NQ-CC', name: 'Cairns Regional', zone: 'NQ' },
+    { id: 'NQ-MC', name: 'Mackay Regional', zone: 'NQ' },
+    { id: 'NQ-RC', name: 'Rockhampton Regional', zone: 'NQ' },
+    { id: 'NQ-WC', name: 'Whitsunday Regional', zone: 'NQ' },
+    { id: 'NQ-BRC', name: 'Burdekin Shire', zone: 'NQ' },
+    { id: 'NQ-HC', name: 'Hinchinbrook Shire', zone: 'NQ' },
+    { id: 'CQ-BC', name: 'Bundaberg Regional', zone: 'CQ' },
+    { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ' },
+    { id: 'CQ-GVC', name: 'Gympie Regional', zone: 'CQ' },
+    { id: 'CQ-FRC', name: 'Fraser Coast Regional', zone: 'CQ' },
+    { id: 'CQ-SC', name: 'South Burnett Regional', zone: 'CQ' },
+    { id: 'CQ-NB', name: 'North Burnett Regional', zone: 'CQ' },
+    { id: 'SWQ-WRC', name: 'Western Downs Regional', zone: 'SWQ' },
+    { id: 'SWQ-MC', name: 'Maranoa Regional', zone: 'SWQ' },
+    { id: 'SWQ-BB', name: 'Balonne Shire', zone: 'SWQ' },
+    { id: 'SWQ-BM', name: 'Bulloo Shire', zone: 'SWQ' },
+    { id: 'SWQ-MU', name: 'Murweh Shire', zone: 'SWQ' },
+    { id: 'SWQ-P', name: 'Paroo Shire', zone: 'SWQ' },
+    { id: 'SWQ-Q', name: 'Quilpie Shire', zone: 'SWQ' },
+    { id: 'FWQ-CC', name: 'Cassowary Coast Regional', zone: 'FWQ' },
+    { id: 'FWQ-CY', name: 'Cairns Regional', zone: 'FWQ' },
+    { id: 'FWQ-TT', name: 'Tablelands Regional', zone: 'FWQ' },
+    { id: 'FWQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FWQ' },
+    { id: 'FWQ-YR', name: 'Yarrabah Aboriginal Shire', zone: 'FWQ' }
+];
+
+// ==================== AUTHENTICATION FUNCTIONS ====================
+
+function signIn() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(async (userCredential) => {
+            currentUser = userCredential.user;
+            
+            // Check if user is approved
+            const approvedDoc = await db.collection('approvedUsers').doc(currentUser.uid).get();
+            
+            if (!approvedDoc.exists || !approvedDoc.data().approved) {
+                await auth.signOut();
+                showToast('Your account is pending approval', 'warning');
+                return;
+            }
+            
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            await initializeDatabase();
+            checkAdminStatus();
+        })
+        .catch((error) => {
+            showToast('Login failed: ' + error.message, 'error');
+        });
+}
+
+function signUp() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(async (userCredential) => {
+            const user = userCredential.user;
+            
+            // Create approval request
+            await db.collection('approvalRequests').doc(user.uid).set({
+                uid: user.uid,
+                email: email,
+                status: 'pending',
+                requestedAt: new Date().toISOString()
+            });
+            
+            await auth.signOut();
+            showToast('Account created. Pending admin approval.', 'success');
+        })
+        .catch((error) => {
+            showToast('Sign up failed: ' + error.message, 'error');
+        });
+}
+
+function enterDemoMode() {
+    isDemoMode = true;
+    currentUser = { uid: 'demo', email: 'demo@local' };
+    
+    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('demoBadge').classList.remove('hidden');
+    document.getElementById('userEmail').textContent = 'Demo Mode';
+    
+    // Load from localStorage
+    const saved = localStorage.getItem('qldCrmDemoData');
+    if (saved) {
+        database = JSON.parse(saved);
+    }
+    
+    initializeUI();
+    updateSyncStatus('Demo Mode');
+}
+
+function signOut() {
+    if (isDemoMode) {
+        isDemoMode = false;
+        currentUser = null;
+        database = { tenders: [], crmContacts: [], interactions: [] };
+    } else {
+        auth.signOut();
+    }
+    
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('authModal').classList.remove('hidden');
+    document.getElementById('demoBadge').classList.add('hidden');
+}
+
+async function checkIfAdmin() {
+    if (isDemoMode) return false;
+    if (!currentUser) return false;
+    
+    const adminDoc = await db.collection('admins').doc(currentUser.uid).get();
+    return adminDoc.exists;
+}
+
+async function checkAdminStatus() {
+    const isAdmin = await checkIfAdmin();
+    if (isAdmin) {
+        document.getElementById('adminButton').classList.remove('hidden');
+    }
+}
+
+// ==================== DATABASE FUNCTIONS ====================
+
+async function initializeDatabase() {
+    if (isDemoMode) return;
+    
+    try {
+        // Load tenders
+        const tendersSnapshot = await db.collection('tenders').get();
+        database.tenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Load CRM contacts
+        const contactsSnapshot = await db.collection('crmContacts').get();
+        database.crmContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Load interactions
+        const interactionsSnapshot = await db.collection('interactions').get();
+        database.interactions = interactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        initializeUI();
+        updateSyncStatus('Synced');
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showToast('Error loading data', 'error');
+    }
+}
+
+async function saveData() {
+    if (isDemoMode) {
+        localStorage.setItem('qldCrmDemoData', JSON.stringify(database));
+        return;
+    }
+    
+    updateSyncStatus('Syncing...');
+    // In real implementation, save to Firestore here
+    setTimeout(() => updateSyncStatus('Synced'), 500);
+}
+
+// ==================== UI INITIALIZATION ====================
+
+function initializeUI() {
+    renderRegionTabs();
+    populateRegionFilters();
+    loadRegion(qldRegions[0].id);
+    updateAllStats();
+}
+
+function renderRegionTabs() {
+    const container = document.getElementById('regionTabs');
+    const zones = ['all', 'SEQ', 'NQ', 'CQ', 'SWQ', 'FWQ'];
+    
+    container.innerHTML = qldRegions.map(region => `
+        <button onclick="loadRegion('${region.id}')" 
+                class="region-tab px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all whitespace-nowrap"
+                data-region="${region.id}"
+                data-zone="${region.zone}">
+            ${region.name}
+        </button>
+    `).join('');
+}
+
+function populateRegionFilters() {
+    const regionSelects = ['crmRegion', 'crmRegionFilter', 'tenderRegion'];
+    
+    regionSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        // Keep the first option
+        const firstOption = select.options[0];
+        select.innerHTML = '';
+        select.appendChild(firstOption);
+        
+        qldRegions.forEach(region => {
+            const option = document.createElement('option');
+            option.value = region.id;
+            option.textContent = region.name;
+            select.appendChild(option);
+        });
+    });
+}
+
+function filterByZone(zone) {
+    // Update button styles
+    document.querySelectorAll('.zone-filter').forEach(btn => {
+        if (btn.dataset.zone === zone) {
+            btn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200');
+            btn.classList.add('bg-[#771414]', 'text-white');
+        } else {
+            btn.classList.remove('bg-[#771414]', 'text-white');
+            btn.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200');
+        }
+    });
+    
+    // Filter region tabs
+    document.querySelectorAll('.region-tab').forEach(tab => {
+        if (zone === 'all' || tab.dataset.zone === zone) {
+            tab.style.display = 'block';
+        } else {
+            tab.style.display = 'none';
+        }
+    });
+}
+
+// ==================== MAIN TAB SWITCHING ====================
+
+function switchMainTab(tab) {
+    currentMainTab = tab;
+    
+    // Update tab styles
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    
+    // Show/hide content
+    document.querySelectorAll('.main-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('content-' + tab).classList.remove('hidden');
+    
+    // Refresh content
+    if (tab === 'tenders') {
+        loadRegion(currentRegion || qldRegions[0].id);
+    } else if (tab === 'crm') {
+        renderCRMContacts();
+    } else if (tab === 'analytics') {
+        renderAnalytics();
+    }
+}
+
+// ==================== TENDER FUNCTIONS ====================
+
+function loadRegion(regionId) {
+    currentRegion = regionId;
+    
+    // Highlight active tab
+    document.querySelectorAll('.region-tab').forEach(tab => {
+        if (tab.dataset.region === regionId) {
+            tab.classList.add('bg-[#771414]', 'text-white');
+            tab.classList.remove('bg-white', 'text-gray-600');
+        } else {
+            tab.classList.remove('bg-[#771414]', 'text-white');
+            tab.classList.add('bg-white', 'text-gray-600');
+        }
+    });
+    
+    const region = qldRegions.find(r => r.id === regionId);
+    const regionTenders = database.tenders.filter(t => t.regionId === regionId);
+    
+    document.getElementById('regionContent').innerHTML = `
+        <div class="glass-panel rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold display-font text-gray-900">${region.name}</h2>
+                    <p class="text-sm text-gray-500 mt-1">${regionTenders.length} tenders</p>
+                </div>
+                <button onclick="showAddTenderModal('${regionId}')" class="px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] transition-colors">
+                    <i class="fas fa-plus mr-2"></i> Add Tender
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${regionTenders.map(tender => renderTenderCard(tender)).join('')}
+        </div>
+        
+        ${regionTenders.length === 0 ? `
+        <div class="text-center py-12 text-gray-400">
+            <i class="fas fa-inbox text-4xl mb-3"></i>
+            <p>No tenders for this region yet</p>
+        </div>
+        ` : ''}
+    `;
+}
+
+function renderTenderCard(tender) {
+    const statusColors = {
+        'TO_PRICE': 'status-to-price',
+        'PRICED': 'status-priced',
+        'NOT_PRICING': 'status-not-pricing',
+        'AWARDED': 'bg-yellow-100 text-yellow-800',
+        'NOT_WON': 'bg-red-100 text-red-800'
     };
     
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-</script>
+    return `
+    <div class="region-card rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="editTender(${tender.id})">
+        <div class="flex justify-between items-start mb-3">
+            <span class="text-xs font-semibold px-2 py-1 rounded ${statusColors[tender.status] || 'bg-gray-100'}">
+                ${tender.status.replace('_', ' ')}
+            </span>
+            <span class="text-xs text-gray-500">${tender.category}</span>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2">${tender.title}</h3>
+        <div class="text-sm text-gray-600 mb-2">${tender.value || 'No value set'}</div>
+        ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> Closes: ${formatDate(tender.closingDate)}</div>` : ''}
+    </div>
+    `;
+}
+
+function showAddTenderModal(regionId) {
+    document.getElementById('tenderModalTitle').textContent = 'Add New Tender';
+    document.getElementById('tenderForm').reset();
+    document.getElementById('tenderId').value = '';
+    document.getElementById('tenderRegion').value = regionId || currentRegion;
     
-    <script>
+    // Hide all conditional fields
+    document.getElementById('pricedFields').classList.add('hidden');
+    document.getElementById('notPricingFields').classList.add('hidden');
+    document.getElementById('awardedFields').classList.add('hidden');
+    document.getElementById('notWonFields').classList.add('hidden');
+    
+    document.getElementById('tenderModal').classList.remove('hidden');
+}
 
+function editTender(id) {
+    const tender = database.tenders.find(t => t.id === id);
+    if (!tender) return;
+    
+    document.getElementById('tenderModalTitle').textContent = 'Edit Tender';
+    document.getElementById('tenderId').value = id;
+    document.getElementById('tenderRegion').value = tender.regionId;
+    document.getElementById('tenderTitle').value = tender.title;
+    document.getElementById('tenderCategory').value = tender.category;
+    document.getElementById('tenderStatus').value = tender.status;
+    document.getElementById('tenderValue').value = tender.value || '';
+    document.getElementById('tenderClosingDate').value = tender.closingDate || '';
+    document.getElementById('tenderDescription').value = tender.description || '';
+    document.getElementById('tenderContactName').value = tender.contact?.name || '';
+    document.getElementById('tenderContactPosition').value = tender.contact?.position || '';
+    document.getElementById('tenderContactEmail').value = tender.contact?.email || '';
+    document.getElementById('tenderContactPhone').value = tender.contact?.phone || '';
+    
+    // Trigger status change to show relevant fields
+    togglePricingFields();
+    
+    // Populate status-specific fields
+    if (tender.status === 'PRICED') {
+        document.getElementById('ourPrice').value = tender.ourPrice || '';
+        document.getElementById('submissionDate').value = tender.submissionDate || '';
+    } else if (tender.status === 'NOT_PRICING') {
+        document.getElementById('notPricingReason').value = tender.notPricingReason || '';
+        document.getElementById('notPricingComments').value = tender.notPricingComments || '';
+    } else if (tender.status === 'AWARDED') {
+        document.getElementById('awardedDate').value = tender.awardedDate || '';
+        document.getElementById('awardedValue').value = tender.awardedValue || '';
+        document.getElementById('awardedScope').value = tender.awardedScope || '';
+    } else if (tender.status === 'NOT_WON') {
+        document.getElementById('winnerName').value = tender.winnerName || '';
+        document.getElementById('winnerPrice').value = tender.winnerPrice || '';
+        document.getElementById('ourLosingPrice').value = tender.ourLosingPrice || '';
+        document.getElementById('resultDate').value = tender.resultDate || '';
+        document.getElementById('notWonComments').value = tender.notWonComments || '';
+    }
+    
+    document.getElementById('tenderModal').classList.remove('hidden');
+}
 
-            categories.forEach(cat => {
-                groupedByCategory[cat] = contacts.filter(c => c.category === cat);
-            });
+function togglePricingFields() {
+    const status = document.getElementById('tenderStatus').value;
+    
+    document.getElementById('pricedFields').classList.add('hidden');
+    document.getElementById('notPricingFields').classList.add('hidden');
+    document.getElementById('awardedFields').classList.add('hidden');
+    document.getElementById('notWonFields').classList.add('hidden');
+    
+    if (status === 'PRICED') {
+        document.getElementById('pricedFields').classList.remove('hidden');
+    } else if (status === 'NOT_PRICING') {
+        document.getElementById('notPricingFields').classList.remove('hidden');
+    } else if (status === 'AWARDED') {
+        document.getElementById('awardedFields').classList.remove('hidden');
+    } else if (status === 'NOT_WON') {
+        document.getElementById('notWonFields').classList.remove('hidden');
+    }
+}
 
-            let html = '';
+function closeTenderModal() {
+    document.getElementById('tenderModal').classList.add('hidden');
+}
 
-            categories.forEach(category => {
-                const categoryContacts = groupedByCategory[category];
-                if (categoryContacts.length === 0) return;
-
-                const categoryConfig = {
-                    'Council': { color: 'blue', icon: 'fa-landmark', border: 'category-council' },
-                    'Supplier': { color: 'green', icon: 'fa-truck', border: 'category-supplier' },
-                    'Contractor': { color: 'orange', icon: 'fa-hard-hat', border: 'category-contractor' },
-                    'Competitor': { color: 'red', icon: 'fa-chess', border: 'category-competitor' }
-                }[category];
-
-                html += `
-                <div class="col-span-1 lg:col-span-2 mb-4">
-                    <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                        <span class="w-8 h-8 rounded-full bg-${categoryConfig.color}-100 text-${categoryConfig.color}-600 flex items-center justify-center mr-2">
-                            <i class="fas ${categoryConfig.icon}"></i>
-                        </span>
-                        ${category}s
-                        <span class="ml-2 text-sm font-normal text-gray-500">(${categoryContacts.length})</span>
-                    </h3>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        ${categoryContacts.map(contact => renderContactCard(contact, categoryConfig)).join('')}
-                    </div>
-                </div>
-                `;
-            });
-
-            container.innerHTML = html;
-            updateCRMStats();
+document.getElementById('tenderForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('tenderId').value;
+    const status = document.getElementById('tenderStatus').value;
+    
+    const tenderData = {
+        regionId: document.getElementById('tenderRegion').value,
+        title: document.getElementById('tenderTitle').value,
+        category: document.getElementById('tenderCategory').value,
+        status: status,
+        value: document.getElementById('tenderValue').value,
+        closingDate: document.getElementById('tenderClosingDate').value,
+        description: document.getElementById('tenderDescription').value,
+        contact: {
+            name: document.getElementById('tenderContactName').value,
+            position: document.getElementById('tenderContactPosition').value,
+            email: document.getElementById('tenderContactEmail').value,
+            phone: document.getElementById('tenderContactPhone').value
+        },
+        updatedAt: new Date().toISOString()
+    };
+    
+    // Add status-specific fields
+    if (status === 'PRICED') {
+        tenderData.ourPrice = document.getElementById('ourPrice').value;
+        tenderData.submissionDate = document.getElementById('submissionDate').value;
+    } else if (status === 'NOT_PRICING') {
+        tenderData.notPricingReason = document.getElementById('notPricingReason').value;
+        tenderData.notPricingComments = document.getElementById('notPricingComments').value;
+    } else if (status === 'AWARDED') {
+        tenderData.awardedDate = document.getElementById('awardedDate').value;
+        tenderData.awardedValue = document.getElementById('awardedValue').value;
+        tenderData.awardedScope = document.getElementById('awardedScope').value;
+    } else if (status === 'NOT_WON') {
+        tenderData.winnerName = document.getElementById('winnerName').value;
+        tenderData.winnerPrice = document.getElementById('winnerPrice').value;
+        tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
+        tenderData.resultDate = document.getElementById('resultDate').value;
+        tenderData.notWonComments = document.getElementById('notWonComments').value;
+    }
+    
+    if (id) {
+        // Update existing
+        const index = database.tenders.findIndex(t => t.id == id);
+        if (index !== -1) {
+            tenderData.id = parseInt(id);
+            tenderData.createdAt = database.tenders[index].createdAt;
+            database.tenders[index] = tenderData;
         }
+    } else {
+        // Create new
+        tenderData.id = Date.now();
+        tenderData.createdAt = new Date().toISOString();
+        tenderData.createdBy = currentUser?.email || 'demo';
+        database.tenders.push(tenderData);
+    }
+    
+    await saveData();
+    closeTenderModal();
+    loadRegion(tenderData.regionId);
+    updateAllStats();
+    showToast('Tender saved successfully!', 'success');
+});
 
-        function renderContactCard(contact, categoryConfig) {
-            const region = qldRegions.find(r => r.id === contact.regionId);
-            const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
+// ==================== CRM FUNCTIONS WITH CATEGORIES ====================
 
-            return `
-            <div class="crm-contact-card ${categoryConfig.border} rounded-xl p-5 shadow-sm card-hover">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-start space-x-3">
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-${categoryConfig.color}-100 to-${categoryConfig.color}-200 flex items-center justify-center text-${categoryConfig.color}-700 font-bold text-xl flex-shrink-0">
-                            ${contact.name.charAt(0)}
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
-                            <p class="text-${categoryConfig.color}-600 font-medium text-sm">${contact.position}</p>
-                            <p class="text-sm text-gray-500">${contact.department || region?.name || 'No organization'}</p>
-                            <div class="flex gap-2 mt-1">
-                                <span class="category-badge category-${contact.category.toLowerCase()}">
-                                    <i class="fas ${categoryConfig.icon} mr-1"></i> ${contact.category}
-                                </span>
-                                <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                                    ${contact.type}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex space-x-1">
-                        <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-${categoryConfig.color}-600 hover:bg-${categoryConfig.color}-50 rounded-lg transition-colors" title="Add Interaction">
-                            <i class="fas fa-comment-dots"></i>
-                        </button>
-                        <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteCRMContact(${contact.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
+function handleCategoryChange() {
+    const category = document.getElementById('crmCategory').value;
+    const regionField = document.getElementById('crmRegion');
+    const regionHelp = document.getElementById('regionHelp');
+    
+    if (category === 'Council') {
+        regionField.required = true;
+        regionHelp.textContent = 'Required for Council contacts';
+        regionHelp.classList.add('text-red-500');
+    } else {
+        regionField.required = false;
+        regionHelp.textContent = 'Optional for non-Council contacts';
+        regionHelp.classList.remove('text-red-500');
+    }
+}
 
-                <div class="space-y-1 text-sm mb-3">
-                    <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
-                    ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
-                    ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
-                </div>
-
-                ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-2 text-sm text-gray-600 mb-3 italic line-clamp-2">${contact.notes}</div>` : ''}
-
-                ${interactions.length > 0 ? `
-                <div class="border-t pt-3">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-semibold text-gray-500">Last Interaction</span>
-                        <span class="text-xs text-gray-400">${interactions.length} total</span>
-                    </div>
-                    <div class="text-xs text-gray-500">${formatDate(interactions[interactions.length-1].date)} • ${interactions[interactions.length-1].type}</div>
-                    <div class="text-sm text-gray-700 line-clamp-1">${interactions[interactions.length-1].notes}</div>
-                </div>
-                ` : ''}
-
-                ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
-                <div class="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
-                    <i class="fas fa-bell mr-2"></i>
-                    Follow-up: ${formatDate(contact.followUpDate)}
-                </div>
-                ` : ''}
+function renderCRMContacts() {
+    const container = document.getElementById('crmContactsList');
+    const searchQuery = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
+    const categoryFilter = document.getElementById('crmCategoryFilter')?.value || 'all';
+    const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
+    
+    let contacts = database.crmContacts || [];
+    
+    // Apply filters
+    if (searchQuery) {
+        contacts = contacts.filter(c => 
+            c.name?.toLowerCase().includes(searchQuery) ||
+            c.position?.toLowerCase().includes(searchQuery) ||
+            c.department?.toLowerCase().includes(searchQuery) ||
+            c.email?.toLowerCase().includes(searchQuery)
+        );
+    }
+    
+    if (categoryFilter !== 'all') {
+        contacts = contacts.filter(c => c.category === categoryFilter);
+    }
+    
+    if (regionFilter !== 'all') {
+        contacts = contacts.filter(c => c.regionId === regionFilter);
+    }
+    
+    // Group by category
+    const categories = ['Council', 'Supplier', 'Contractor', 'Competitor'];
+    const groupedByCategory = {};
+    
+    categories.forEach(cat => {
+        groupedByCategory[cat] = contacts.filter(c => c.category === cat);
+    });
+    
+    let html = '';
+    
+    categories.forEach(category => {
+        const categoryContacts = groupedByCategory[category];
+        if (categoryContacts.length === 0) return;
+        
+        const categoryConfig = {
+            'Council': { color: 'blue', icon: 'fa-landmark', border: 'category-council' },
+            'Supplier': { color: 'green', icon: 'fa-truck', border: 'category-supplier' },
+            'Contractor': { color: 'orange', icon: 'fa-hard-hat', border: 'category-contractor' },
+            'Competitor': { color: 'red', icon: 'fa-chess', border: 'category-competitor' }
+        }[category];
+        
+        html += `
+        <div class="col-span-1 lg:col-span-2 mb-4">
+            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                <span class="w-8 h-8 rounded-full bg-${categoryConfig.color}-100 text-${categoryConfig.color}-600 flex items-center justify-center mr-2">
+                    <i class="fas ${categoryConfig.icon}"></i>
+                </span>
+                ${category}s
+                <span class="ml-2 text-sm font-normal text-gray-500">(${categoryContacts.length})</span>
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                ${categoryContacts.map(contact => renderContactCard(contact, categoryConfig)).join('')}
             </div>
-            `;
+        </div>
+        `;
+    });
+    
+    if (html === '') {
+        html = `
+        <div class="col-span-1 lg:col-span-2 text-center py-12 text-gray-400">
+            <i class="fas fa-users text-4xl mb-3"></i>
+            <p>No contacts found</p>
+        </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+    updateCRMStats();
+}
+
+function renderContactCard(contact, categoryConfig) {
+    const region = qldRegions.find(r => r.id === contact.regionId);
+    const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
+    
+    return `
+    <div class="crm-contact-card ${categoryConfig.border} rounded-xl p-5 shadow-sm card-hover">
+        <div class="flex justify-between items-start mb-3">
+            <div class="flex items-start space-x-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-${categoryConfig.color}-100 to-${categoryConfig.color}-200 flex items-center justify-center text-${categoryConfig.color}-700 font-bold text-xl flex-shrink-0">
+                    ${contact.name.charAt(0)}
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
+                    <p class="text-${categoryConfig.color}-600 font-medium text-sm">${contact.position}</p>
+                    <p class="text-sm text-gray-500">${contact.department || region?.name || 'No organization'}</p>
+                    <div class="flex gap-2 mt-1">
+                        <span class="category-badge category-${contact.category.toLowerCase()}">
+                            <i class="fas ${categoryConfig.icon} mr-1"></i> ${contact.category}
+                        </span>
+                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                            ${contact.type}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-1">
+                <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-${categoryConfig.color}-600 hover:bg-${categoryConfig.color}-50 rounded-lg transition-colors" title="Add Interaction">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+                <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteCRMContact(${contact.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-1 text-sm mb-3">
+            <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
+            ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
+            ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
+        </div>
+
+        ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-2 text-sm text-gray-600 mb-3 italic line-clamp-2">${contact.notes}</div>` : ''}
+
+        ${interactions.length > 0 ? `
+        <div class="border-t pt-3">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500">Last Interaction</span>
+                <span class="text-xs text-gray-400">${interactions.length} total</span>
+            </div>
+            <div class="text-xs text-gray-500">${formatDate(interactions[interactions.length-1].date)} • ${interactions[interactions.length-1].type}</div>
+            <div class="text-sm text-gray-700 line-clamp-1">${interactions[interactions.length-1].notes}</div>
+        </div>
+        ` : ''}
+
+        ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
+        <div class="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
+            <i class="fas fa-bell mr-2"></i>
+            Follow-up: ${formatDate(contact.followUpDate)}
+        </div>
+        ` : ''}
+    </div>
+    `;
+}
+
+function searchCRM() {
+    renderCRMContacts();
+}
+
+function filterCRM() {
+    renderCRMContacts();
+}
+
+function showAddCRMModal() {
+    document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
+    document.getElementById('crmContactId').value = '';
+    document.getElementById('crmForm').reset();
+    handleCategoryChange();
+    document.getElementById('crmModal').classList.remove('hidden');
+}
+
+function editCRMContact(id) {
+    const contact = database.crmContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
+    document.getElementById('crmContactId').value = id;
+    document.getElementById('crmCategory').value = contact.category || 'Council';
+    document.getElementById('crmRegion').value = contact.regionId || '';
+    document.getElementById('crmType').value = contact.type;
+    document.getElementById('crmName').value = contact.name;
+    document.getElementById('crmPosition').value = contact.position;
+    document.getElementById('crmDepartment').value = contact.department || '';
+    document.getElementById('crmDirectPhone').value = contact.directPhone || '';
+    document.getElementById('crmMobile').value = contact.mobile || '';
+    document.getElementById('crmEmail').value = contact.email;
+    document.getElementById('crmLinkedIn').value = contact.linkedIn || '';
+    document.getElementById('crmNotes').value = contact.notes || '';
+    document.getElementById('crmLastContactDate').value = contact.lastContactDate || '';
+    document.getElementById('crmLastContactType').value = contact.lastContactType || '';
+    document.getElementById('crmLastContactNotes').value = contact.lastContactNotes || '';
+    document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
+    document.getElementById('crmPriority').value = contact.priority || 'Medium';
+
+    handleCategoryChange();
+    document.getElementById('crmModal').classList.remove('hidden');
+}
+
+async function deleteCRMContact(id) {
+    const contact = database.crmContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    if (!confirm(`Are you sure you want to delete ${contact.name}?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        database.crmContacts = database.crmContacts.filter(c => c.id !== id);
+
+        if (database.interactions) {
+            database.interactions = database.interactions.filter(i => i.contactId !== id);
         }
 
-        function searchCRM() {
-            renderCRMContacts();
-        }
+        await saveData();
+        renderCRMContacts();
+        updateAllStats();
+        showToast('Contact deleted successfully', 'success');
 
-        function filterCRM() {
-            renderCRMContacts();
-        }
+    } catch (error) {
+        console.error('Error deleting contact:', error);
+        showToast('Error deleting contact: ' + error.message, 'error');
+    }
+}
 
-        function showAddCRMModal() {
-            document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
-            document.getElementById('crmContactId').value = '';
-            document.getElementById('crmForm').reset();
-            handleCategoryChange(); // Set initial region field state
-            document.getElementById('crmModal').classList.remove('hidden');
-        }
+function closeCRMModal() {
+    document.getElementById('crmModal').classList.add('hidden');
+}
 
-        function editCRMContact(id) {
-            const contact = database.crmContacts.find(c => c.id === id);
-            if (!contact) return;
+document.getElementById('crmForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-            document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
-            document.getElementById('crmContactId').value = id;
-            document.getElementById('crmCategory').value = contact.category || 'Council';
-            document.getElementById('crmRegion').value = contact.regionId || '';
-            document.getElementById('crmType').value = contact.type;
-            document.getElementById('crmName').value = contact.name;
-            document.getElementById('crmPosition').value = contact.position;
-            document.getElementById('crmDepartment').value = contact.department || '';
-            document.getElementById('crmDirectPhone').value = contact.directPhone || '';
-            document.getElementById('crmMobile').value = contact.mobile || '';
-            document.getElementById('crmEmail').value = contact.email;
-            document.getElementById('crmLinkedIn').value = contact.linkedIn || '';
-            document.getElementById('crmNotes').value = contact.notes || '';
-            document.getElementById('crmLastContactDate').value = contact.lastContactDate || '';
-            document.getElementById('crmLastContactType').value = contact.lastContactType || '';
-            document.getElementById('crmLastContactNotes').value = contact.lastContactNotes || '';
-            document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
-            document.getElementById('crmPriority').value = contact.priority || 'Medium';
+    const id = document.getElementById('crmContactId').value;
+    const category = document.getElementById('crmCategory').value;
 
-            handleCategoryChange(); // Update region field requirements
-            document.getElementById('crmModal').classList.remove('hidden');
-        }
-
-        async function deleteCRMContact(id) {
-            const contact = database.crmContacts.find(c => c.id === id);
-            if (!contact) return;
-
-            if (!confirm(`Are you sure you want to delete ${contact.name}?\n\nThis action cannot be undone.`)) {
-                return;
-            }
-
-            try {
-                database.crmContacts = database.crmContacts.filter(c => c.id !== id);
-
-                if (database.interactions) {
-                    database.interactions = database.interactions.filter(i => i.contactId !== id);
-                }
-
-                await saveData();
-                renderCRMContacts();
-                updateAllStats();
-                showToast('Contact deleted successfully', 'success');
-
-            } catch (error) {
-                console.error('Error deleting contact:', error);
-                showToast('Error deleting contact: ' + error.message, 'error');
-            }
-        }
-
-        function closeCRMModal() {
-            document.getElementById('crmModal').classList.add('hidden');
-        }
-
-        document.getElementById('crmForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const id = document.getElementById('crmContactId').value;
-            const category = document.getElementById('crmCategory').value;
-
-            // Validate region for Council contacts
-            if (category === 'Council' && !document.getElementById('crmRegion').value) {
-                showToast('Please select a region for Council contacts', 'error');
-                return;
-            }
+    // Validate region for Council contacts
+    if (category === 'Council' && !document.getElementById('crmRegion').value) {
+        showToast('Please select a region for Council contacts', 'error');
+        return;
+    }
 
     const contactData = {
+        category: category,
         regionId: document.getElementById('crmRegion').value,
         type: document.getElementById('crmType').value,
         name: document.getElementById('crmName').value,
@@ -1291,525 +1831,527 @@ const firebaseConfig = {
         lastContactNotes: document.getElementById('crmLastContactNotes').value,
         followUpDate: document.getElementById('crmFollowUpDate').value,
         priority: document.getElementById('crmPriority').value,
-        updatedAt: new Date().toISOString(),  // ← ADD COMMA HERE
-        createdBy: currentUser.email || currentUser.uid,
-        createdAt: new Date().toISOString(),
-        updatedBy: currentUser.email || currentUser.uid,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || currentUser?.uid || 'demo'
     };
 
-            if (id) {
-                const index = database.crmContacts.findIndex(c => c.id == id);
-                if (index !== -1) {
-                    contactData.id = parseInt(id);
-                    contactData.interactions = database.crmContacts[index].interactions || [];
-                    contactData.createdAt = database.crmContacts[index].createdAt;
-                    contactData.createdBy = database.crmContacts[index].createdBy;
-                    database.crmContacts[index] = contactData;
-                }
-            } else {
-                contactData.id = Date.now();
-                contactData.interactions = [];
-                contactData.createdAt = new Date().toISOString();
-                contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
-                database.crmContacts.push(contactData);
-            }
-
-            await saveData();
-            closeCRMModal();
-            renderCRMContacts();
-            updateAllStats();
-            showToast('Contact saved successfully!', 'success');
-        });
-
-        // ==================== INTERACTION FUNCTIONS ====================
-
-        function showAddInteractionModal(contactId) {
-            document.getElementById('interactionContactId').value = contactId;
-            document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('interactionForm').reset();
-            document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('interactionModal').classList.remove('hidden');
+    if (id) {
+        const index = database.crmContacts.findIndex(c => c.id == id);
+        if (index !== -1) {
+            contactData.id = parseInt(id);
+            contactData.interactions = database.crmContacts[index].interactions || [];
+            contactData.createdAt = database.crmContacts[index].createdAt;
+            contactData.createdBy = database.crmContacts[index].createdBy;
+            database.crmContacts[index] = contactData;
         }
+    } else {
+        contactData.id = Date.now();
+        contactData.interactions = [];
+        contactData.createdAt = new Date().toISOString();
+        contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
+        database.crmContacts.push(contactData);
+    }
 
-        function closeInteractionModal() {
-            document.getElementById('interactionModal').classList.add('hidden');
+    await saveData();
+    closeCRMModal();
+    renderCRMContacts();
+    updateAllStats();
+    showToast('Contact saved successfully!', 'success');
+});
+
+// ==================== INTERACTION FUNCTIONS ====================
+
+function showAddInteractionModal(contactId) {
+    document.getElementById('interactionContactId').value = contactId;
+    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('interactionForm').reset();
+    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('interactionModal').classList.remove('hidden');
+}
+
+function closeInteractionModal() {
+    document.getElementById('interactionModal').classList.add('hidden');
+}
+
+document.getElementById('interactionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const contactId = parseInt(document.getElementById('interactionContactId').value);
+
+    const interaction = {
+        id: Date.now(),
+        contactId: contactId,
+        date: document.getElementById('interactionDate').value,
+        type: document.getElementById('interactionType').value,
+        notes: document.getElementById('interactionNotes').value,
+        nextSteps: document.getElementById('interactionNextSteps').value,
+        createdAt: new Date().toISOString()
+    };
+
+    if (!database.interactions) database.interactions = [];
+    database.interactions.push(interaction);
+
+    // Update contact's last contact info
+    const contact = database.crmContacts.find(c => c.id === contactId);
+    if (contact) {
+        contact.lastContactDate = interaction.date;
+        contact.lastContactType = interaction.type;
+        contact.lastContactNotes = interaction.notes;
+    }
+
+    await saveData();
+    closeInteractionModal();
+    renderCRMContacts();
+    showToast('Interaction added!', 'success');
+});
+
+// ==================== ANALYTICS FUNCTIONS ====================
+
+function renderAnalytics() {
+    const tenders = database.tenders || [];
+
+    // Win rate stats
+    const priced = tenders.filter(t => t.status === 'PRICED' || t.status === 'AWARDED' || t.status === 'NOT_WON');
+    const won = tenders.filter(t => t.status === 'AWARDED');
+    const lost = tenders.filter(t => t.status === 'NOT_WON');
+    const winRate = priced.length > 0 ? ((won.length / priced.length) * 100).toFixed(1) : 0;
+
+    document.getElementById('analyticsTotalPriced').textContent = priced.length;
+    document.getElementById('analyticsWon').textContent = won.length;
+    document.getElementById('analyticsLost').textContent = lost.length;
+    document.getElementById('analyticsWinRate').textContent = winRate + '%';
+
+    // Pipeline values
+    const toPriceValue = sumValues(tenders.filter(t => t.status === 'TO_PRICE'));
+    const pricedValue = sumValues(tenders.filter(t => t.status === 'PRICED'));
+    const awardedValue = sumValues(tenders.filter(t => t.status === 'AWARDED'));
+    const totalPipeline = toPriceValue + pricedValue + awardedValue;
+
+    document.getElementById('analyticsToPriceValue').textContent = formatCurrency(toPriceValue);
+    document.getElementById('analyticsPricedValue').textContent = formatCurrency(pricedValue);
+    document.getElementById('analyticsAwardedValue').textContent = formatCurrency(awardedValue);
+    document.getElementById('analyticsTotalPipeline').textContent = formatCurrency(totalPipeline);
+
+    // Region performance
+    const regionStats = {};
+    tenders.forEach(t => {
+        if (!regionStats[t.regionId]) {
+            regionStats[t.regionId] = { total: 0, won: 0, value: 0 };
         }
+        regionStats[t.regionId].total++;
+        if (t.status === 'AWARDED') {
+            regionStats[t.regionId].won++;
+            regionStats[t.regionId].value += parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0;
+        }
+    });
 
-        document.getElementById('interactionForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+    const sortedRegions = Object.entries(regionStats)
+        .sort((a, b) => b[1].value - a[1].value)
+        .slice(0, 10);
 
-            const contactId = parseInt(document.getElementById('interactionContactId').value);
-
-            const interaction = {
-                id: Date.now(),
-                contactId: contactId,
-                date: document.getElementById('interactionDate').value,
-                type: document.getElementById('interactionType').value,
-                notes: document.getElementById('interactionNotes').value,
-                nextSteps: document.getElementById('interactionNextSteps').value,
-                createdAt: new Date().toISOString()
-            };
-
-            if (!database.interactions) database.interactions = [];
-            database.interactions.push(interaction);
-
-            // Update contact's last contact info
-            const contact = database.crmContacts.find(c => c.id === contactId);
-            if (contact) {
-                contact.lastContactDate = interaction.date;
-                contact.lastContactType = interaction.type;
-                contact.lastContactNotes = interaction.notes;
-            }
-
-            await saveData();
-            closeInteractionModal();
-            renderCRMContacts();
-            showToast('Interaction added!', 'success');
-        });
-
-        // ==================== ANALYTICS FUNCTIONS ====================
-
-        function renderAnalytics() {
-            const tenders = database.tenders || [];
-
-            // Win rate stats
-            const priced = tenders.filter(t => t.status === 'PRICED' || t.status === 'AWARDED' || t.status === 'NOT_WON');
-            const won = tenders.filter(t => t.status === 'AWARDED');
-            const lost = tenders.filter(t => t.status === 'NOT_WON');
-            const winRate = priced.length > 0 ? ((won.length / priced.length) * 100).toFixed(1) : 0;
-
-            document.getElementById('analyticsTotalPriced').textContent = priced.length;
-            document.getElementById('analyticsWon').textContent = won.length;
-            document.getElementById('analyticsLost').textContent = lost.length;
-            document.getElementById('analyticsWinRate').textContent = winRate + '%';
-
-            // Pipeline values
-            const toPriceValue = sumValues(tenders.filter(t => t.status === 'TO_PRICE'));
-            const pricedValue = sumValues(tenders.filter(t => t.status === 'PRICED'));
-            const awardedValue = sumValues(tenders.filter(t => t.status === 'AWARDED'));
-            const totalPipeline = toPriceValue + pricedValue + awardedValue;
-
-            document.getElementById('analyticsToPriceValue').textContent = formatCurrency(toPriceValue);
-            document.getElementById('analyticsPricedValue').textContent = formatCurrency(pricedValue);
-            document.getElementById('analyticsAwardedValue').textContent = formatCurrency(awardedValue);
-            document.getElementById('analyticsTotalPipeline').textContent = formatCurrency(totalPipeline);
-
-            // Region performance
-            const regionStats = {};
-            tenders.forEach(t => {
-                if (!regionStats[t.regionId]) {
-                    regionStats[t.regionId] = { total: 0, won: 0, value: 0 };
-                }
-                regionStats[t.regionId].total++;
-                if (t.status === 'AWARDED') {
-                    regionStats[t.regionId].won++;
-                    regionStats[t.regionId].value += parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0;
-                }
-            });
-
-            const sortedRegions = Object.entries(regionStats)
-                .sort((a, b) => b[1].value - a[1].value)
-                .slice(0, 10);
-
-            document.getElementById('regionPerformanceList').innerHTML = sortedRegions.map(([regionId, stats]) => {
-                const region = qldRegions.find(r => r.id === regionId);
-                const winRate = stats.total > 0 ? ((stats.won / stats.total) * 100).toFixed(0) : 0;
-                return `
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-full bg-[#771414] bg-opacity-10 text-[#771414] flex items-center justify-center font-bold">
-                            ${winRate}%
-                        </div>
-                        <div>
-                            <div class="font-semibold text-gray-900">${region?.name}</div>
-                            <div class="text-sm text-gray-500">${stats.won}/${stats.total} won</div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold text-gray-900">${formatCurrency(stats.value)}</div>
-                        <div class="text-sm text-gray-500">awarded</div>
-                    </div>
+    document.getElementById('regionPerformanceList').innerHTML = sortedRegions.map(([regionId, stats]) => {
+        const region = qldRegions.find(r => r.id === regionId);
+        const winRate = stats.total > 0 ? ((stats.won / stats.total) * 100).toFixed(0) : 0;
+        return `
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-[#771414] bg-opacity-10 text-[#771414] flex items-center justify-center font-bold">
+                    ${winRate}%
                 </div>
-                `;
-            }).join('');
-        }
+                <div>
+                    <div class="font-semibold text-gray-900">${region?.name}</div>
+                    <div class="text-sm text-gray-500">${stats.won}/${stats.total} won</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-bold text-gray-900">${formatCurrency(stats.value)}</div>
+                <div class="text-sm text-gray-500">awarded</div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
 
-        // ==================== UTILITY FUNCTIONS ====================
+// ==================== UTILITY FUNCTIONS ====================
 
-        function updateAllStats() {
-            // Tender stats
-            const toPrice = database.tenders.filter(t => t.status === 'TO_PRICE').length;
-            const priced = database.tenders.filter(t => t.status === 'PRICED').length;
-            const notPricing = database.tenders.filter(t => t.status === 'NOT_PRICING').length;
-            const awarded = database.tenders.filter(t => t.status === 'AWARDED').length;
-            const notWon = database.tenders.filter(t => t.status === 'NOT_WON').length;
+function updateAllStats() {
+    // Tender stats
+    const toPrice = database.tenders.filter(t => t.status === 'TO_PRICE').length;
+    const priced = database.tenders.filter(t => t.status === 'PRICED').length;
+    const notPricing = database.tenders.filter(t => t.status === 'NOT_PRICING').length;
+    const awarded = database.tenders.filter(t => t.status === 'AWARDED').length;
+    const notWon = database.tenders.filter(t => t.status === 'NOT_WON').length;
 
-            document.getElementById('statToPrice').textContent = toPrice;
-            document.getElementById('statPriced').textContent = priced;
-            document.getElementById('statNotPricing').textContent = notPricing;
-            document.getElementById('statAwarded').textContent = awarded;
-            document.getElementById('statNotWon').textContent = notWon;
+    document.getElementById('statToPrice').textContent = toPrice;
+    document.getElementById('statPriced').textContent = priced;
+    document.getElementById('statNotPricing').textContent = notPricing;
+    document.getElementById('statAwarded').textContent = awarded;
+    document.getElementById('statNotWon').textContent = notWon;
 
-            const totalAwarded = database.tenders
-                .filter(t => t.status === 'AWARDED')
-                .reduce((sum, t) => sum + (parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0), 0);
-            document.getElementById('statTotalValue').textContent = formatCurrency(totalAwarded);
+    const totalAwarded = database.tenders
+        .filter(t => t.status === 'AWARDED')
+        .reduce((sum, t) => sum + (parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0), 0);
+    document.getElementById('statTotalValue').textContent = formatCurrency(totalAwarded);
 
-            // CRM stats
-            updateCRMStats();
-        }
+    // CRM stats
+    updateCRMStats();
+}
 
-        function updateCRMStats() {
-            const contacts = database.crmContacts || [];
-            const interactions = database.interactions || [];
+function updateCRMStats() {
+    const contacts = database.crmContacts || [];
+    
+    // Update category counts
+    document.getElementById('crmTotalContacts').textContent = contacts.length;
+    document.getElementById('crmCouncils').textContent = contacts.filter(c => c.category === 'Council').length;
+    document.getElementById('crmSuppliers').textContent = contacts.filter(c => c.category === 'Supplier').length;
+    document.getElementById('crmContractors').textContent = contacts.filter(c => c.category === 'Contractor').length;
+    document.getElementById('crmCompetitors').textContent = contacts.filter(c => c.category === 'Competitor').length;
+}
 
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+function sumValues(tenders) {
+    return tenders.reduce((sum, t) => {
+        const val = parseFloat(t.value?.replace(/[^0-9.]/g, '')) || 0;
+        return sum + val;
+    }, 0);
+}
 
-            const recentInteractions = interactions.filter(i => new Date(i.date) >= thirtyDaysAgo).length;
-            const followupsDue = contacts.filter(c => c.followUpDate && new Date(c.followUpDate) <= new Date()).length;
+function formatCurrency(value) {
+    if (value >= 1000000) {
+        return '$' + (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+        return '$' + (value / 1000).toFixed(0) + 'K';
+    }
+    return '$' + value;
+}
 
-            // Update category counts
-            document.getElementById('crmTotalContacts').textContent = contacts.length;
-            document.getElementById('crmCouncils').textContent = contacts.filter(c => c.category === 'Council').length;
-            document.getElementById('crmSuppliers').textContent = contacts.filter(c => c.category === 'Supplier').length;
-            document.getElementById('crmContractors').textContent = contacts.filter(c => c.category === 'Contractor').length;
-            document.getElementById('crmCompetitors').textContent = contacts.filter(c => c.category === 'Competitor').length;
-        }
+function updateSyncStatus(status) {
+    const indicator = document.getElementById('syncStatus');
+    if (status === 'Synced' || status === 'Demo Mode') {
+        indicator.innerHTML = `<i class="fas ${isDemoMode ? 'fa-flask' : 'fa-check-circle'} mr-1"></i> ${status}`;
+        indicator.className = isDemoMode ? 'flex items-center text-amber-600' : 'flex items-center text-green-600';
+    } else if (status === 'Offline') {
+        indicator.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
+        indicator.className = 'flex items-center text-orange-600';
+    } else {
+        indicator.innerHTML = '<i class="fas fa-sync-alt mr-1 fa-spin"></i> Syncing...';
+        indicator.className = 'flex items-center text-blue-600';
+    }
+}
 
-        function sumValues(tenders) {
-            return tenders.reduce((sum, t) => {
-                const val = parseFloat(t.value?.replace(/[^0-9.]/g, '')) || 0;
-                return sum + val;
-            }, 0);
-        }
+function globalSearch() {
+    const query = document.getElementById('globalSearch').value.toLowerCase();
+    if (!query) {
+        if (currentMainTab === 'tenders') loadRegion(currentRegion);
+        else if (currentMainTab === 'crm') renderCRMContacts();
+        return;
+    }
 
-        function formatCurrency(value) {
-            if (value >= 1000000) {
-                return '$' + (value / 1000000).toFixed(1) + 'M';
-            } else if (value >= 1000) {
-                return '$' + (value / 1000).toFixed(0) + 'K';
-            }
-            return '$' + value;
-        }
+    // Search across tenders
+    const filteredTenders = database.tenders.filter(t => 
+        t.title.toLowerCase().includes(query) || 
+        t.category.toLowerCase().includes(query) ||
+        t.contact?.name.toLowerCase().includes(query)
+    );
 
-        function updateSyncStatus(status) {
-            const indicator = document.getElementById('syncStatus');
-            if (status === 'Synced' || status === 'Demo Mode') {
-                indicator.innerHTML = `<i class="fas ${isDemoMode ? 'fa-flask' : 'fa-check-circle'} mr-1"></i> ${status}`;
-                indicator.className = isDemoMode ? 'flex items-center text-amber-600' : 'flex items-center text-green-600';
-            } else if (status === 'Offline') {
-                indicator.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
-                indicator.className = 'flex items-center text-orange-600';
-            } else {
-                indicator.innerHTML = '<i class="fas fa-sync-alt mr-1 fa-spin"></i> Syncing...';
-                indicator.className = 'flex items-center text-blue-600';
-            }
-        }
+    if (currentMainTab === 'tenders') {
+        document.getElementById('regionContent').innerHTML = `
+            <div class="glass-panel rounded-2xl p-6 mb-6">
+                <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
+                <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders</p>
+                <button onclick="loadRegion('${currentRegion}')" class="text-[#771414] hover:underline mb-4">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to region view
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${filteredTenders.map(tender => {
+                    const region = qldRegions.find(r => r.id === tender.regionId);
+                    return `
+                    <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editTender(${tender.id}), 100)">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold px-2 py-1 rounded bg-[#771414] bg-opacity-10 text-[#771414]">${region?.name}</span>
+                            <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.status}</span>
+                        </div>
+                        <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
+                        <div class="text-sm text-gray-600">${tender.value}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+}
 
-        function globalSearch() {
-            const query = document.getElementById('globalSearch').value.toLowerCase();
-            if (!query) {
-                if (currentMainTab === 'tenders') loadRegion(currentRegion);
-                else if (currentMainTab === 'crm') renderCRMContacts();
-                return;
-            }
+function exportToExcel() {
+    let csv = 'Type,Region,Title,Category,Status,Value,Closing Date,Contact Name,Contact Email,Contact Phone,Description\n';
 
-            // Search across tenders
-            const filteredTenders = database.tenders.filter(t => 
-                t.title.toLowerCase().includes(query) || 
-                t.category.toLowerCase().includes(query) ||
-                t.contact?.name.toLowerCase().includes(query)
-            );
+    database.tenders.forEach(t => {
+        const region = qldRegions.find(r => r.id === t.regionId);
+        csv += `Tender,${region?.name},"${t.title}","${t.category}","${t.status}","${t.value}","${t.closingDate}","${t.contact?.name}","${t.contact?.email}","${t.contact?.phone}","${t.description}"\n`;
+    });
 
-            if (currentMainTab === 'tenders') {
-                document.getElementById('regionContent').innerHTML = `
-                    <div class="glass-panel rounded-2xl p-6 mb-6">
-                        <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
-                        <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders</p>
-                        <button onclick="loadRegion('${currentRegion}')" class="text-[#771414] hover:underline mb-4">
-                            <i class="fas fa-arrow-left mr-1"></i> Back to region view
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        ${filteredTenders.map(tender => {
-                            const region = qldRegions.find(r => r.id === tender.regionId);
-                            return `
-                            <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editTender(${tender.id}), 100)">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-[#771414] bg-opacity-10 text-[#771414]">${region?.name}</span>
-                                    <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.status}</span>
-                                </div>
-                                <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
-                                <div class="text-sm text-gray-600">${tender.value}</div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                `;
-            }
-        }
+    if (database.crmContacts) {
+        database.crmContacts.forEach(c => {
+            const region = qldRegions.find(r => r.id === c.regionId);
+            csv += `Contact,${region?.name},"${c.name}","${c.category}","${c.position}","${c.department}","${c.email}","${c.directPhone}","${c.mobile}","${c.notes}"\n`;
+        });
+    }
 
-        function exportToExcel() {
-            let csv = 'Type,Region,Title,Category,Status,Value,Closing Date,Contact Name,Contact Email,Contact Phone,Description\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `QLD_Business_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
 
-            database.tenders.forEach(t => {
-                const region = qldRegions.find(r => r.id === t.regionId);
-                csv += `Tender,${region?.name},"${t.title}","${t.category}","${t.status}","${t.value}","${t.closingDate}","${t.contact?.name}","${t.contact?.email}","${t.contact?.phone}","${t.description}"\n`;
-            });
+    showToast('Report exported successfully!', 'success');
+}
 
-            if (database.crmContacts) {
-                database.crmContacts.forEach(c => {
-                    const region = qldRegions.find(r => r.id === c.regionId);
-                    csv += `Contact,${region?.name},"${c.name}","${c.category}","${c.position}","${c.department}","${c.email}","${c.directPhone}","${c.mobile}","${c.notes}"\n`;
-                });
-            }
+function shareReport() {
+    const shareData = {
+        title: 'QLD Business Development & CRM Report',
+        text: `Managing ${database.tenders.length} tenders and ${database.crmContacts?.length || 0} contacts across 77 Queensland LGAs`,
+        url: window.location.href
+    };
 
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `QLD_Business_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
+    if (navigator.share) {
+        navigator.share(shareData);
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        showToast('Link copied to clipboard!', 'success');
+    }
+}
 
-            showToast('Report exported successfully!', 'success');
-        }
+function quickAdd() {
+    if (currentMainTab === 'tenders') {
+        showAddTenderModal();
+    } else if (currentMainTab === 'crm') {
+        showAddCRMModal();
+    }
+}
 
-        function shareReport() {
-            const shareData = {
-                title: 'QLD Business Development & CRM Report',
-                text: `Managing ${database.tenders.length} tenders and ${database.crmContacts?.length || 0} contacts across 77 Queensland LGAs`,
-                url: window.location.href
-            };
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
 
-            if (navigator.share) {
-                navigator.share(shareData);
-            } else {
-                navigator.clipboard.writeText(window.location.href);
-                showToast('Link copied to clipboard!', 'success');
-            }
-        }
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+        warning: 'bg-amber-500'
+    };
 
-        function quickAdd() {
-            if (currentMainTab === 'tenders') {
-                showAddTenderModal();
-            } else if (currentMainTab === 'crm') {
-                showAddCRMModal();
-            }
-        }
+    toast.className = `toast ${colors[type] || colors.info} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
+    toast.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+        <span>${message}</span>
+    `;
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
+    container.appendChild(toast);
 
-            const colors = {
-                success: 'bg-green-500',
-                error: 'bg-red-500',
-                info: 'bg-blue-500',
-                warning: 'bg-amber-500'
-            };
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
-            toast.className = `toast ${colors[type] || colors.info} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
-            toast.innerHTML = `
-                <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                <span>${message}</span>
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ==================== ADMIN FUNCTIONS ====================
+
+async function showAdminPanel() {
+    if (!await checkIfAdmin()) {
+        showToast('Access denied. Admin only.', 'error');
+        return;
+    }
+
+    document.getElementById('adminPanel').classList.remove('hidden');
+    loadPendingApprovals();
+    loadApprovedUsers();
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminPanel').classList.add('hidden');
+}
+
+async function loadPendingApprovals() {
+    try {
+        const snapshot = await db.collection('approvalRequests')
+            .where('status', '==', 'pending')
+            .orderBy('requestedAt', 'desc')
+            .get();
+
+        const container = document.getElementById('pendingApprovalsList');
+
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
+                    <p>No pending approval requests</p>
+                </div>
             `;
-
-            container.appendChild(toast);
-
-            setTimeout(() => toast.classList.add('show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            return;
         }
 
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
+            return `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                <div>
+                    <div class="font-semibold text-gray-900">${data.email}</div>
+                    <div class="text-sm text-gray-500">Requested: ${date}</div>
+                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                        <i class="fas fa-check mr-1"></i> Approve
+                    </button>
+                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                        <i class="fas fa-times mr-1"></i> Reject
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading approvals:", err);
+        document.getElementById('pendingApprovalsList').innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                <p>Error loading requests. Check permissions.</p>
+            </div>
+        `;
+    }
+}
+
+async function loadApprovedUsers() {
+    try {
+        const snapshot = await db.collection('approvedUsers')
+            .where('approved', '==', true)
+            .orderBy('approvedAt', 'desc')
+            .get();
+
+        const container = document.getElementById('approvedUsersList');
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
+            return;
         }
 
-        // Close modals on outside click
-        document.getElementById('tenderModal').addEventListener('click', function(e) {
-            if (e.target === this) closeTenderModal();
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
+            return `
+            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
+                <div>
+                    <div class="font-medium text-gray-900">${data.email}</div>
+                    <div class="text-xs text-green-700">Approved: ${date}</div>
+                </div>
+                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fas fa-user-times"></i> Revoke
+                </button>
+            </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading approved users:", err);
+    }
+}
+
+async function approveUser(uid, email) {
+    try {
+        // Add to approved users
+        await db.collection('approvedUsers').doc(uid).set({
+            email: email,
+            approved: true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.email
         });
-        document.getElementById('crmModal').addEventListener('click', function(e) {
-            if (e.target === this) closeCRMModal();
+
+        // Update request status
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'approved',
+            approvedAt: new Date().toISOString()
         });
-        document.getElementById('interactionModal').addEventListener('click', function(e) {
-            if (e.target === this) closeInteractionModal();
+
+        showToast(`Approved ${email}`, 'success');
+        loadPendingApprovals();
+        loadApprovedUsers();
+
+    } catch (err) {
+        showToast('Error approving user: ' + err.message, 'error');
+    }
+}
+
+async function rejectUser(uid) {
+    if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
+        return;
+    }
+
+    try {
+        await db.collection('approvalRequests').doc(uid).update({
+            status: 'rejected',
+            rejectedAt: new Date().toISOString()
         });
 
-        // ==================== ADMIN FUNCTIONS ====================
+        showToast('User rejected', 'info');
+        loadPendingApprovals();
 
-        async function showAdminPanel() {
-            if (!await checkIfAdmin()) {
-                showToast('Access denied. Admin only.', 'error');
-                return;
-            }
+    } catch (err) {
+        showToast('Error rejecting user: ' + err.message, 'error');
+    }
+}
 
-            document.getElementById('adminPanel').classList.remove('hidden');
-            loadPendingApprovals();
-            loadApprovedUsers();
-        }
+async function revokeAccess(uid) {
+    if (!confirm('Are you sure you want to revoke this user\'s access?')) {
+        return;
+    }
 
-        function closeAdminPanel() {
-            document.getElementById('adminPanel').classList.add('hidden');
-        }
+    try {
+        await db.collection('approvedUsers').doc(uid).update({
+            approved: false,
+            revokedAt: new Date().toISOString(),
+            revokedBy: currentUser.email
+        });
 
-        async function loadPendingApprovals() {
-            try {
-                const snapshot = await db.collection('approvalRequests')
-                    .where('status', '==', 'pending')
-                    .orderBy('requestedAt', 'desc')
-                    .get();
+        showToast('Access revoked', 'success');
+        loadApprovedUsers();
 
-                const container = document.getElementById('pendingApprovalsList');
+    } catch (err) {
+        showToast('Error revoking access: ' + err.message, 'error');
+    }
+}
 
-                if (snapshot.empty) {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                            <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
-                            <p>No pending approval requests</p>
-                        </div>
-                    `;
-                    return;
-                }
+// Close modals on outside click
+document.getElementById('tenderModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTenderModal();
+});
+document.getElementById('crmModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCRMModal();
+});
+document.getElementById('interactionModal').addEventListener('click', function(e) {
+    if (e.target === this) closeInteractionModal();
+});
 
-                container.innerHTML = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
-                    return `
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                        <div>
-                            <div class="font-semibold text-gray-900">${data.email}</div>
-                            <div class="text-sm text-gray-500">Requested: ${date}</div>
-                            <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
-                                <i class="fas fa-check mr-1"></i> Approve
-                            </button>
-                            <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
-                                <i class="fas fa-times mr-1"></i> Reject
-                            </button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
+// Offline detection
+window.addEventListener('offline', () => {
+    document.getElementById('offlineBanner').classList.add('show');
+    updateSyncStatus('Offline');
+});
 
-            } catch (err) {
-                console.error("Error loading approvals:", err);
-                document.getElementById('pendingApprovalsList').innerHTML = `
-                    <div class="text-center py-8 text-red-500">
-                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                        <p>Error loading requests. Check permissions.</p>
-                    </div>
-                `;
-            }
-        }
-
-        async function loadApprovedUsers() {
-            try {
-                const snapshot = await db.collection('approvedUsers')
-                    .where('approved', '==', true)
-                    .orderBy('approvedAt', 'desc')
-                    .get();
-
-                const container = document.getElementById('approvedUsersList');
-
-                if (snapshot.empty) {
-                    container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
-                    return;
-                }
-
-                container.innerHTML = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
-                    return `
-                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                        <div>
-                            <div class="font-medium text-gray-900">${data.email}</div>
-                            <div class="text-xs text-green-700">Approved: ${date}</div>
-                        </div>
-                        <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
-                            <i class="fas fa-user-times"></i> Revoke
-                        </button>
-                    </div>
-                    `;
-                }).join('');
-
-            } catch (err) {
-                console.error("Error loading approved users:", err);
-            }
-        }
-
-        async function approveUser(uid, email) {
-            try {
-                // Add to approved users
-                await db.collection('approvedUsers').doc(uid).set({
-                    email: email,
-                    approved: true,
-                    approvedAt: new Date().toISOString(),
-                    approvedBy: currentUser.email
-                });
-
-                // Update request status
-                await db.collection('approvalRequests').doc(uid).update({
-                    status: 'approved',
-                    approvedAt: new Date().toISOString()
-                });
-
-                showToast(`Approved ${email}`, 'success');
-                loadPendingApprovals();
-                loadApprovedUsers();
-
-            } catch (err) {
-                showToast('Error approving user: ' + err.message, 'error');
-            }
-        }
-
-        async function rejectUser(uid) {
-            if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
-                return;
-            }
-
-            try {
-                await db.collection('approvalRequests').doc(uid).update({
-                    status: 'rejected',
-                    rejectedAt: new Date().toISOString()
-                });
-
-                showToast('User rejected', 'info');
-                loadPendingApprovals();
-
-            } catch (err) {
-                showToast('Error rejecting user: ' + err.message, 'error');
-            }
-        }
-
-        async function revokeAccess(uid) {
-            if (!confirm('Are you sure you want to revoke this user\'s access?')) {
-                return;
-            }
-
-            try {
-                await db.collection('approvedUsers').doc(uid).update({
-                    approved: false,
-                    revokedAt: new Date().toISOString(),
-                    revokedBy: currentUser.email
-                });
-
-                showToast('Access revoked', 'success');
-                loadApprovedUsers();
-
-            } catch (err) {
-                showToast('Error revoking access: ' + err.message, 'error');
-            }
-        }
-    </script>
+window.addEventListener('online', () => {
+    document.getElementById('offlineBanner').classList.remove('show');
+    updateSyncStatus('Synced');
+});    
+</script>
 </body>
 </html>
+
 
 
