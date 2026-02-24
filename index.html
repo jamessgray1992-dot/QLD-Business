@@ -690,7 +690,7 @@ const firebaseConfig = {
                     </button>
                 </div>
 
-                <form id="tenderForm" class="p-6 space-y-4"> onsubmit="saveTender(event)"
+                <form id="tenderForm" class="p-6 space-y-4" onsubmit="saveTender(event)">
                     <input type="hidden" id="tenderId">
                     <input type="hidden" id="tenderRegion">
 
@@ -900,7 +900,7 @@ const firebaseConfig = {
                     </button>
                 </div>
                 
-                <form id="crmForm" class="p-6 space-y-4"> onsubmit="saveCRM(event)"
+                <form id="crmForm" class="p-6 space-y-4" onsubmit="saveCRM(event)">
                     <input type="hidden" id="crmContactId">
 
                     <div class="grid grid-cols-2 gap-4">
@@ -1045,7 +1045,7 @@ const firebaseConfig = {
                     </button>
                 </div>
 
-                <form id="interactionForm" class="p-6 space-y-4"> onsubmit="saveInteraction(event)"
+                <form id="interactionForm" class="p-6 space-y-4" onsubmit="saveInteraction(event)">
                     <input type="hidden" id="interactionContactId">
 
                     <div>
@@ -2728,10 +2728,10 @@ async function revokeAccess(uid) {
 
 // Close modals on outside click
 
-});
 </script>
 </body>
 </html>
+
 
 
 
