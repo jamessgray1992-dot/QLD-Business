@@ -250,6 +250,14 @@ const firebaseConfig = {
         .category-supplier { background: #d1fae5; color: #065f46; }
         .category-contractor { background: #fef3c7; color: #92400e; }
         .category-competitor { background: #fee2e2; color: #991b1b; }
+
+        /* Zone Filter Button Colors */
+        .zone-filter[data-zone="SEQ"].active { background-color: #771414 !important; color: white !important; }
+        .zone-filter[data-zone="NQ"].active { background-color: #0369a1 !important; color: white !important; }
+        .zone-filter[data-zone="CQ"].active { background-color: #059669 !important; color: white !important; }
+        .zone-filter[data-zone="SWQ"].active { background-color: #d97706 !important; color: white !important; }
+        .zone-filter[data-zone="FNQ"].active { background-color: #10b981 !important; color: white !important; }
+        .zone-filter[data-zone="GULF"].active { background-color: #8b5cf6 !important; color: white !important; }
     </style>
 <base target="_blank">
 </head>
@@ -472,8 +480,11 @@ const firebaseConfig = {
                             <button onclick="filterByZone('SWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="SWQ">
                                 South West QLD
                             </button>
-                            <button onclick="filterByZone('FWQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="FWQ">
+                            <button onclick="filterByZone('FNQ')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="FNQ">
                                 Far North QLD
+                            </button>
+                            <button onclick="filterByZone('GULF')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="GULF">
+                                Gulf Country
                             </button>
                         </div>
                     </div>
@@ -1096,39 +1107,91 @@ let database = {
 
 // Queensland Regions Data (77 LGAs)
 const qldRegions = [
+    // ==================== SOUTH EAST QUEENSLAND (SEQ) ====================
     { id: 'SEQ-BCC', name: 'Brisbane City Council', zone: 'SEQ' },
     { id: 'SEQ-GC', name: 'Gold Coast City', zone: 'SEQ' },
     { id: 'SEQ-ISC', name: 'Ipswich City', zone: 'SEQ' },
     { id: 'SEQ-LCC', name: 'Logan City', zone: 'SEQ' },
     { id: 'SEQ-MRCC', name: 'Moreton Bay Regional', zone: 'SEQ' },
-    { id: 'SEQ-RRC', name: 'Redland City', zone: 'SEQ' },
-    { id: 'SEQ-SC', name: 'Sunshine Coast Regional', zone: 'SEQ' },
-    { id: 'SEQ-TC', name: 'Toowoomba Regional', zone: 'SEQ' },
+    { id: 'SEQ-RCC', name: 'Redland City', zone: 'SEQ' },
+    { id: 'SEQ-SCRC', name: 'Sunshine Coast Regional', zone: 'SEQ' },
+    { id: 'SEQ-TRC', name: 'Toowoomba Regional', zone: 'SEQ' },
+    { id: 'SEQ-LS', name: 'Lockyer Valley Regional', zone: 'SEQ' },
+    { id: 'SEQ-SC', name: 'Scenic Rim Regional', zone: 'SEQ' },
+    { id: 'SEQ-SB', name: 'Somerset Regional', zone: 'SEQ' },
+    { id: 'SEQ-SRC', name: 'Southern Downs Regional', zone: 'SEQ' },
+    { id: 'SEQ-WRC', name: 'Western Downs Regional', zone: 'SEQ' },
+    { id: 'SEQ-GRC', name: 'Goondiwindi Regional', zone: 'SEQ' },
+    { id: 'SEQ-SBRC', name: 'South Burnett Regional', zone: 'SEQ' },
+    { id: 'SEQ-NBRC', name: 'North Burnett Regional', zone: 'SEQ' },
+    { id: 'SEQ-CRC', name: 'Cherbourg Aboriginal Shire', zone: 'SEQ' },
+    
+    // ==================== NORTH QUEENSLAND (NQ) ====================
     { id: 'NQ-TC', name: 'Townsville City', zone: 'NQ' },
     { id: 'NQ-CC', name: 'Cairns Regional', zone: 'NQ' },
-    { id: 'NQ-MC', name: 'Mackay Regional', zone: 'NQ' },
-    { id: 'NQ-RC', name: 'Rockhampton Regional', zone: 'NQ' },
-    { id: 'NQ-WC', name: 'Whitsunday Regional', zone: 'NQ' },
-    { id: 'NQ-BRC', name: 'Burdekin Shire', zone: 'NQ' },
-    { id: 'NQ-HC', name: 'Hinchinbrook Shire', zone: 'NQ' },
-    { id: 'CQ-BC', name: 'Bundaberg Regional', zone: 'CQ' },
+    { id: 'NQ-MRC', name: 'Mackay Regional', zone: 'NQ' },
+    { id: 'NQ-RRC', name: 'Rockhampton Regional', zone: 'NQ' },
+    { id: 'NQ-WRC', name: 'Whitsunday Regional', zone: 'NQ' },
+    { id: 'NQ-BS', name: 'Burdekin Shire', zone: 'NQ' },
+    { id: 'NQ-HS', name: 'Hinchinbrook Shire', zone: 'NQ' },
+    { id: 'NQ-ICC', name: 'Isaac Regional', zone: 'NQ' },
+    { id: 'NQ-BC', name: 'Bowen Shire', zone: 'NQ' },
+    { id: 'NQ-CCRC', name: 'Central Highlands Regional', zone: 'NQ' },
+    { id: 'NQ-WC', name: 'Winton Shire', zone: 'NQ' },
+    { id: 'NQ-FC', name: 'Flinders Shire', zone: 'NQ' },
+    { id: 'NQ-RM', name: 'Richmond Shire', zone: 'NQ' },
+    { id: 'NQ-MC', name: 'McKinlay Shire', zone: 'NQ' },
+    { id: 'NQ-CC2', name: 'Carpentaria Shire', zone: 'NQ' },
+    { id: 'NQ-CRC', name: 'Croydon Shire', zone: 'NQ' },
+    
+    // ==================== CENTRAL QUEENSLAND (CQ) ====================
+    { id: 'CQ-BRC', name: 'Bundaberg Regional', zone: 'CQ' },
     { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ' },
-    { id: 'CQ-GVC', name: 'Gympie Regional', zone: 'CQ' },
-    { id: 'CQ-FRC', name: 'Fraser Coast Regional', zone: 'CQ' },
-    { id: 'CQ-SC', name: 'South Burnett Regional', zone: 'CQ' },
+    { id: 'CQ-GV', name: 'Gympie Regional', zone: 'CQ' },
+    { id: 'CQ-FCRC', name: 'Fraser Coast Regional', zone: 'CQ' },
+    { id: 'CQ-BB', name: 'Banana Shire', zone: 'CQ' },
     { id: 'CQ-NB', name: 'North Burnett Regional', zone: 'CQ' },
+    { id: 'CQ-SB', name: 'South Burnett Regional', zone: 'CQ' },
+    { id: 'CQ-GC', name: 'Gladstone Regional', zone: 'CQ' },
+    
+    // ==================== SOUTH WEST QUEENSLAND (SWQ) ====================
     { id: 'SWQ-WRC', name: 'Western Downs Regional', zone: 'SWQ' },
     { id: 'SWQ-MC', name: 'Maranoa Regional', zone: 'SWQ' },
-    { id: 'SWQ-BB', name: 'Balonne Shire', zone: 'SWQ' },
+    { id: 'SWQ-BS', name: 'Balonne Shire', zone: 'SWQ' },
     { id: 'SWQ-BM', name: 'Bulloo Shire', zone: 'SWQ' },
     { id: 'SWQ-MU', name: 'Murweh Shire', zone: 'SWQ' },
-    { id: 'SWQ-P', name: 'Paroo Shire', zone: 'SWQ' },
-    { id: 'SWQ-Q', name: 'Quilpie Shire', zone: 'SWQ' },
-    { id: 'FWQ-CC', name: 'Cassowary Coast Regional', zone: 'FWQ' },
-    { id: 'FWQ-CY', name: 'Cairns Regional', zone: 'FWQ' },
-    { id: 'FWQ-TT', name: 'Tablelands Regional', zone: 'FWQ' },
-    { id: 'FWQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FWQ' },
-    { id: 'FWQ-YR', name: 'Yarrabah Aboriginal Shire', zone: 'FWQ' }
+    { id: 'SWQ-PA', name: 'Paroo Shire', zone: 'SWQ' },
+    { id: 'SWQ-QU', name: 'Quilpie Shire', zone: 'SWQ' },
+    { id: 'SWQ-BA', name: 'Barcoo Shire', zone: 'SWQ' },
+    { id: 'SWQ-BB', name: 'Boulia Shire', zone: 'SWQ' },
+    { id: 'SWQ-DI', name: 'Diamantina Shire', zone: 'SWQ' },
+    
+    // ==================== FAR NORTH QUEENSLAND (FNQ) ====================
+    { id: 'FNQ-TC', name: 'Tablelands Regional', zone: 'FNQ' },
+    { id: 'FNQ-MC', name: 'Mareeba Shire', zone: 'FNQ' },
+    { id: 'FNQ-DT', name: 'Douglas Shire', zone: 'FNQ' },
+    { id: 'FNQ-CC', name: 'Cassowary Coast Regional', zone: 'FNQ' },
+    { id: 'FNQ-AP', name: 'Aurukun Shire', zone: 'FNQ' },
+    { id: 'FNQ-CK', name: 'Cook Shire', zone: 'FNQ' },
+    { id: 'FNQ-CM', name: 'Croydon Shire', zone: 'FNQ' },
+    { id: 'FNQ-EA', name: 'Etheridge Shire', zone: 'FNQ' },
+    { id: 'FNQ-HP', name: 'Hope Vale Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-KO', name: 'Kowanyama Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-LP', name: 'Lockhart River Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-MP', name: 'Mapoon Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-NP', name: 'Napranum Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-NL', name: 'Northern Peninsula Area Regional', zone: 'FNQ' },
+    { id: 'FNQ-PO', name: 'Pormpuraaw Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-TH', name: 'Torres Shire', zone: 'FNQ' },
+    { id: 'FNQ-TI', name: 'Torres Strait Island Regional', zone: 'FNQ' },
+    { id: 'FNQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FNQ' },
+    { id: 'FNQ-YA', name: 'Yarrabah Aboriginal Shire', zone: 'FNQ' },
+    
+    // ==================== GULF COUNTRY ====================
+    { id: 'GULF-BS', name: 'Burke Shire', zone: 'GULF' },
+    { id: 'GULF-CS', name: 'Carpentaria Shire', zone: 'GULF' },
+    { id: 'GULF-DO', name: 'Doomadgee Aboriginal Shire', zone: 'GULF' },
+    { id: 'GULF-GC', name: 'Gregory Shire', zone: 'GULF' }
 ];
 
 // ==================== AUTHENTICATION FUNCTIONS ====================
@@ -2447,6 +2510,7 @@ window.addEventListener('online', () => {
 </script>
 </body>
 </html>
+
 
 
 
