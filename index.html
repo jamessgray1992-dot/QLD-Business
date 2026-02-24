@@ -847,15 +847,6 @@ const firebaseConfig = {
                     </button>
                 </div>
                 
-<div class="col-span-2 md:col-span-1">
-    <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-    <select id="crmCategory" required onchange="handleCategoryChange()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-        <option value="Council">Council (LGA)</option>
-        <option value="Supplier">Supplier</option>
-        <option value="Contractor">Contractor</option>
-        <option value="Competitor">Competitor</option>
-    </select>
-</div>
                 <form id="crmForm" class="p-6 space-y-4">
                     <input type="hidden" id="crmContactId">
 
@@ -892,7 +883,15 @@ const firebaseConfig = {
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                            <select id="crmCategory" required onchange="handleCategoryChange()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
+                                <option value="Council">Council (LGA)</option>
+                                <option value="Supplier">Supplier</option>
+                                <option value="Contractor">Contractor</option>
+                                <option value="Competitor">Competitor</option>
+                            </select>
+                        </div>
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                             <input type="text" id="crmName" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
@@ -2378,6 +2377,7 @@ window.addEventListener('online', () => {
 </script>
 </body>
 </html>
+
 
 
 
