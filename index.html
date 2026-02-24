@@ -690,7 +690,7 @@ const firebaseConfig = {
                     </button>
                 </div>
 
-                <form id="tenderForm" class="p-6 space-y-4">
+                <form id="tenderForm" class="p-6 space-y-4"> onsubmit="saveTender(event)"
                     <input type="hidden" id="tenderId">
                     <input type="hidden" id="tenderRegion">
 
@@ -860,6 +860,25 @@ const firebaseConfig = {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
                             <textarea id="tenderDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
                         </div>
+                        <div class="col-span-2 border-t pt-4 mt-2">
+    <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
+        <i class="fas fa-comments mr-2 text-purple-600"></i> Comments & History
+    </h4>
+    
+    <!-- Existing Comments Display -->
+    <div id="tenderCommentsList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
+        <!-- Populated by JS -->
+    </div>
+    
+    <!-- Add New Comment -->
+    <div class="bg-gray-50 rounded-lg p-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Add Update/Comment</label>
+        <textarea id="newTenderComment" rows="2" placeholder="Enter update or comment..." class="w-full rounded-lg px-3 py-2 border-2 border-gray-200 focus:border-purple-500 focus:outline-none text-sm mb-2"></textarea>
+        <button type="button" onclick="addTenderComment()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
+            <i class="fas fa-plus mr-1"></i> Add Comment
+        </button>
+    </div>
+</div>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4 border-t">
@@ -882,7 +901,7 @@ const firebaseConfig = {
                     </button>
                 </div>
                 
-                <form id="crmForm" class="p-6 space-y-4">
+                <form id="crmForm" class="p-6 space-y-4"> onsubmit="saveCRM(event)"
                     <input type="hidden" id="crmContactId">
 
                     <div class="grid grid-cols-2 gap-4">
@@ -1027,7 +1046,7 @@ const firebaseConfig = {
                     </button>
                 </div>
 
-                <form id="interactionForm" class="p-6 space-y-4">
+                <form id="interactionForm" class="p-6 space-y-4"> onsubmit="saveInteraction(event)"
                     <input type="hidden" id="interactionContactId">
 
                     <div>
@@ -1702,17 +1721,30 @@ function renderTenderCard(tender) {
         'NOT_WON': 'bg-red-100 text-red-800'
     };
     
+    const commentCount = tender.comments?.length || 0;
+    
     return `
-    <div class="region-card rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="editTender(${tender.id})">
+    <div class="region-card rounded-xl p-5 shadow-sm card-hover relative group">
         <div class="flex justify-between items-start mb-3">
             <span class="text-xs font-semibold px-2 py-1 rounded ${statusColors[tender.status] || 'bg-gray-100'}">
                 ${tender.status.replace('_', ' ')}
             </span>
+            <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="event.stopPropagation(); editTender(${tender.id})" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="event.stopPropagation(); deleteTender(${tender.id})" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
             <span class="text-xs text-gray-500">${tender.category}</span>
         </div>
-        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2">${tender.title}</h3>
+        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 cursor-pointer" onclick="editTender(${tender.id})">${tender.title}</h3>
         <div class="text-sm text-gray-600 mb-2">${tender.value || 'No value set'}</div>
-        ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> Closes: ${formatDate(tender.closingDate)}</div>` : ''}
+        <div class="flex justify-between items-center">
+            ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> ${formatDate(tender.closingDate)}</div>` : '<div></div>'}
+            ${commentCount > 0 ? `<div class="text-xs text-blue-600 font-medium"><i class="fas fa-comments mr-1"></i> ${commentCount}</div>` : ''}
+        </div>
     </div>
     `;
 }
@@ -1728,7 +1760,9 @@ function showAddTenderModal(regionId) {
     document.getElementById('notPricingFields').classList.add('hidden');
     document.getElementById('awardedFields').classList.add('hidden');
     document.getElementById('notWonFields').classList.add('hidden');
-    
+
+    // Render comments
+renderTenderComments(id);
     document.getElementById('tenderModal').classList.remove('hidden');
 }
 
@@ -1774,8 +1808,98 @@ function editTender(id) {
     
     document.getElementById('tenderModal').classList.remove('hidden');
 }
+async function deleteTender(id) {
+    const tender = database.tenders.find(t => t.id === id);
+    if (!tender) return;
 
-function togglePricingFields() {
+    if (!confirm(`Are you sure you want to delete "${tender.title}"?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        // Remove from local database
+        database.tenders = database.tenders.filter(t => t.id !== id);
+        
+        // Remove from Firestore if not in demo mode
+        if (!isDemoMode && currentUser) {
+            await db.collection('tenders').doc(String(id)).delete();
+        }
+        
+        await saveData();
+        loadRegion(tender.regionId);
+        updateAllStats();
+        showToast('Tender deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting tender:', error);
+        showToast('Error deleting tender: ' + error.message, 'error');
+    }
+}
+function renderTenderComments(tenderId) {
+    const tender = database.tenders.find(t => t.id === tenderId);
+    const container = document.getElementById('tenderCommentsList');
+    
+    if (!tender || !tender.comments || tender.comments.length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-400 italic">No comments yet</p>';
+        return;
+    }
+    
+    // Sort by date descending (newest first)
+    const sortedComments = [...tender.comments].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    container.innerHTML = sortedComments.map(comment => `
+        <div class="bg-white border border-gray-200 rounded-lg p-3 text-sm">
+            <div class="flex justify-between items-start mb-1">
+                <span class="font-medium text-gray-900">${comment.author}</span>
+                <span class="text-xs text-gray-500">${formatDate(comment.date)} at ${new Date(comment.date).toLocaleTimeString('en-AU', {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <p class="text-gray-700">${comment.text}</p>
+        </div>
+    `).join('');
+}
+
+async function addTenderComment() {
+    const tenderId = document.getElementById('tenderId').value;
+    const commentText = document.getElementById('newTenderComment').value.trim();
+    
+    if (!commentText) {
+        showToast('Please enter a comment', 'warning');
+        return;
+    }
+    
+    if (!tenderId) {
+        showToast('Save the tender first before adding comments', 'warning');
+        return;
+    }
+    
+    const tender = database.tenders.find(t => t.id == tenderId);
+    if (!tender) return;
+    
+    // Initialize comments array if doesn't exist
+    if (!tender.comments) tender.comments = [];
+    
+    // Add new comment
+    const newComment = {
+        id: Date.now(),
+        text: commentText,
+        author: currentUser?.email || currentUser?.uid || 'Demo User',
+        date: new Date().toISOString()
+    };
+    
+    tender.comments.push(newComment);
+    tender.updatedAt = new Date().toISOString();
+    
+    // Clear input
+    document.getElementById('newTenderComment').value = '';
+    
+    // Re-render comments
+    renderTenderComments(parseInt(tenderId));
+    
+    // Save to database
+    await saveData();
+    showToast('Comment added', 'success');
+}
+    function togglePricingFields() {
     const status = document.getElementById('tenderStatus').value;
     
     document.getElementById('pricedFields').classList.add('hidden');
@@ -2604,209 +2728,12 @@ async function revokeAccess(uid) {
 }
 
 // Close modals on outside click
-// ✅ FIXED VERSION - Wrap in DOMContentLoaded:
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // Tender form submission
-    const tenderForm = document.getElementById('tenderForm');
-    if (tenderForm) {
-        tenderForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const id = document.getElementById('tenderId').value;
-            const status = document.getElementById('tenderStatus').value;
-            
-            const tenderData = {
-                regionId: document.getElementById('tenderRegion').value,
-                title: document.getElementById('tenderTitle').value,
-                category: document.getElementById('tenderCategory').value,
-                status: status,
-                value: document.getElementById('tenderValue').value,
-                closingDate: document.getElementById('tenderClosingDate').value,
-                description: document.getElementById('tenderDescription').value,
-                contact: {
-                    name: document.getElementById('tenderContactName').value,
-                    position: document.getElementById('tenderContactPosition').value,
-                    email: document.getElementById('tenderContactEmail').value,
-                    phone: document.getElementById('tenderContactPhone').value
-                },
-                updatedAt: new Date().toISOString()
-            };
-            
-            // Add status-specific fields
-            if (status === 'PRICED') {
-                tenderData.ourPrice = document.getElementById('ourPrice').value;
-                tenderData.submissionDate = document.getElementById('submissionDate').value;
-            } else if (status === 'NOT_PRICING') {
-                tenderData.notPricingReason = document.getElementById('notPricingReason').value;
-                tenderData.notPricingComments = document.getElementById('notPricingComments').value;
-            } else if (status === 'AWARDED') {
-                tenderData.awardedDate = document.getElementById('awardedDate').value;
-                tenderData.awardedValue = document.getElementById('awardedValue').value;
-                tenderData.awardedScope = document.getElementById('awardedScope').value;
-            } else if (status === 'NOT_WON') {
-                tenderData.winnerName = document.getElementById('winnerName').value;
-                tenderData.winnerPrice = document.getElementById('winnerPrice').value;
-                tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
-                tenderData.resultDate = document.getElementById('resultDate').value;
-                tenderData.notWonComments = document.getElementById('notWonComments').value;
-            }
-            
-            if (id) {
-                const index = database.tenders.findIndex(t => t.id == id);
-                if (index !== -1) {
-                    tenderData.id = parseInt(id);
-                    tenderData.createdAt = database.tenders[index].createdAt;
-                    database.tenders[index] = tenderData;
-                }
-            } else {
-                tenderData.id = Date.now();
-                tenderData.createdAt = new Date().toISOString();
-                tenderData.createdBy = currentUser?.email || 'demo';
-                database.tenders.push(tenderData);
-            }
-            
-            await saveData();
-            closeTenderModal();
-            loadRegion(tenderData.regionId);
-            updateAllStats();
-            showToast('Tender saved successfully!', 'success');
-        });
-    }
 
-    // CRM form submission
-    const crmForm = document.getElementById('crmForm');
-    if (crmForm) {
-        crmForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const id = document.getElementById('crmContactId').value;
-            const category = document.getElementById('crmCategory').value;
-
-            if (category === 'Council' && !document.getElementById('crmRegion').value) {
-                showToast('Please select a region for Council contacts', 'error');
-                return;
-            }
-
-            const contactData = {
-                category: category,
-                regionId: document.getElementById('crmRegion').value,
-                type: document.getElementById('crmType').value,
-                name: document.getElementById('crmName').value,
-                position: document.getElementById('crmPosition').value,
-                department: document.getElementById('crmDepartment').value,
-                directPhone: document.getElementById('crmDirectPhone').value,
-                mobile: document.getElementById('crmMobile').value,
-                email: document.getElementById('crmEmail').value,
-                linkedIn: document.getElementById('crmLinkedIn').value,
-                notes: document.getElementById('crmNotes').value,
-                lastContactDate: document.getElementById('crmLastContactDate').value,
-                lastContactType: document.getElementById('crmLastContactType').value,
-                lastContactNotes: document.getElementById('crmLastContactNotes').value,
-                followUpDate: document.getElementById('crmFollowUpDate').value,
-                priority: document.getElementById('crmPriority').value,
-                updatedAt: new Date().toISOString(),
-                updatedBy: currentUser?.email || currentUser?.uid || 'demo'
-            };
-
-            if (id) {
-                const index = database.crmContacts.findIndex(c => c.id == id);
-                if (index !== -1) {
-                    contactData.id = parseInt(id);
-                    contactData.interactions = database.crmContacts[index].interactions || [];
-                    contactData.createdAt = database.crmContacts[index].createdAt;
-                    contactData.createdBy = database.crmContacts[index].createdBy;
-                    database.crmContacts[index] = contactData;
-                }
-            } else {
-                contactData.id = Date.now();
-                contactData.interactions = [];
-                contactData.createdAt = new Date().toISOString();
-                contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
-                database.crmContacts.push(contactData);
-            }
-
-            await saveData();
-            closeCRMModal();
-            renderCRMContacts();
-            updateAllStats();
-            showToast('Contact saved successfully!', 'success');
-        });
-    }
-
-    // Interaction form submission
-    const interactionForm = document.getElementById('interactionForm');
-    if (interactionForm) {
-        interactionForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const contactId = parseInt(document.getElementById('interactionContactId').value);
-
-            const interaction = {
-                id: Date.now(),
-                contactId: contactId,
-                date: document.getElementById('interactionDate').value,
-                type: document.getElementById('interactionType').value,
-                notes: document.getElementById('interactionNotes').value,
-                nextSteps: document.getElementById('interactionNextSteps').value,
-                createdAt: new Date().toISOString()
-            };
-
-            if (!database.interactions) database.interactions = [];
-            database.interactions.push(interaction);
-
-            const contact = database.crmContacts.find(c => c.id === contactId);
-            if (contact) {
-                contact.lastContactDate = interaction.date;
-                contact.lastContactType = interaction.type;
-                contact.lastContactNotes = interaction.notes;
-            }
-
-            await saveData();
-            closeInteractionModal();
-            renderCRMContacts();
-            showToast('Interaction added!', 'success');
-        });
-    }
-
-    // Modal close on outside click
-    const tenderModal = document.getElementById('tenderModal');
-    if (tenderModal) {
-        tenderModal.addEventListener('click', function(e) {
-            if (e.target === this) closeTenderModal();
-        });
-    }
-    
-    const crmModal = document.getElementById('crmModal');
-    if (crmModal) {
-        crmModal.addEventListener('click', function(e) {
-            if (e.target === this) closeCRMModal();
-        });
-    }
-    
-    const interactionModal = document.getElementById('interactionModal');
-    if (interactionModal) {
-        interactionModal.addEventListener('click', function(e) {
-            if (e.target === this) closeInteractionModal();
-        });
-    }
-
-    // Offline detection
-    window.addEventListener('offline', () => {
-        const banner = document.getElementById('offlineBanner');
-        if (banner) banner.classList.add('show');
-        updateSyncStatus('Offline');
-    });
-
-    window.addEventListener('online', () => {
-        const banner = document.getElementById('offlineBanner');
-        if (banner) banner.classList.remove('show');
-        updateSyncStatus('Synced');
-    });
 });
 </script>
 </body>
 </html>
+
 
 
 
