@@ -2262,33 +2262,34 @@ async function deleteCRMContact(id) {
             document.getElementById('crmModal').classList.add('hidden');
         }
 
-        document.getElementById('crmForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const id = document.getElementById('crmContactId').value;
-            
-            const contactData = {
-                regionId: document.getElementById('crmRegion').value,
-                type: document.getElementById('crmType').value,
-                name: document.getElementById('crmName').value,
-                position: document.getElementById('crmPosition').value,
-                department: document.getElementById('crmDepartment').value,
-                directPhone: document.getElementById('crmDirectPhone').value,
-                mobile: document.getElementById('crmMobile').value,
-                email: document.getElementById('crmEmail').value,
-                linkedIn: document.getElementById('crmLinkedIn').value,
-                notes: document.getElementById('crmNotes').value,
-                lastContactDate: document.getElementById('crmLastContactDate').value,
-                lastContactType: document.getElementById('crmLastContactType').value,
-                lastContactNotes: document.getElementById('crmLastContactNotes').value,
-                followUpDate: document.getElementById('crmFollowUpDate').value,
-                priority: document.getElementById('crmPriority').value,
-                updatedAt: new Date().toISOString()
-                createdBy: currentUser.email || currentUser.uid,
-                createdAt: new Date().toISOString(),
-                updatedBy: currentUser.email || currentUser.uid,
-                updatedAt: new Date().toISOString()
-            };
+document.getElementById('crmForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('crmContactId').value;
+    
+    const contactData = {
+        regionId: document.getElementById('crmRegion').value,
+        type: document.getElementById('crmType').value,
+        name: document.getElementById('crmName').value,
+        position: document.getElementById('crmPosition').value,
+        department: document.getElementById('crmDepartment').value,
+        directPhone: document.getElementById('crmDirectPhone').value,
+        mobile: document.getElementById('crmMobile').value,
+        email: document.getElementById('crmEmail').value,
+        linkedIn: document.getElementById('crmLinkedIn').value,
+        notes: document.getElementById('crmNotes').value,
+        lastContactDate: document.getElementById('crmLastContactDate').value,
+        lastContactType: document.getElementById('crmLastContactType').value,
+        lastContactNotes: document.getElementById('crmLastContactNotes').value,
+        followUpDate: document.getElementById('crmFollowUpDate').value,
+        priority: document.getElementById('crmPriority').value,
+        updatedAt: new Date().toISOString(),  // ← ADD COMMA HERE
+        createdBy: currentUser.email || currentUser.uid,
+        createdAt: new Date().toISOString(),
+        updatedBy: currentUser.email || currentUser.uid,
+        updatedAt: new Date().toISOString()
+    };
+    
             
             if (id) {
                 const index = database.crmContacts.findIndex(c => c.id == id);
@@ -2799,6 +2800,7 @@ async function deleteCRMContact(id) {
 </body>
 
 </html>
+
 
 
 
