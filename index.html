@@ -1207,14 +1207,7 @@ function signIn() {
             showToast('Login failed: ' + errorMessage, 'error');
         });
 }
-function signUp() {
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please enter email and password', 'error');
-        return;
-    }
+
 function emergencyAdminLogin() {
     // Only for development/testing - remove in production
     const email = prompt("Enter admin email:");
@@ -1226,6 +1219,16 @@ function emergencyAdminLogin() {
         signIn();
     }
 }
+
+function signUp() {
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
     auth.createUserWithEmailAndPassword(email, password)
         .then(async (userCredential) => {
             const user = userCredential.user;
@@ -2419,6 +2422,7 @@ window.addEventListener('online', () => {
 </script>
 </body>
 </html>
+
 
 
 
