@@ -25,10 +25,34 @@ const firebaseConfig = {
   measurementId: "G-XE0LCMYLC5"
     };
     
-    // Initialize Firebase
+/ Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
+    
+    // ✅ ADD THIS: Set auth persistence to LOCAL
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .catch((error) => {
+            console.error("Auth persistence error:", error);
+        });
+    
+    // ✅ ADD THIS: Listen for auth state changes
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is signed in
+            console.log("User already signed in:", user.email);
+            currentUser = user;
+            document.getElementById('userEmail').textContent = user.email;
+            
+            // Check if approved and show app
+            checkUserApproval(user);
+        } else {
+            // No user signed in, show auth modal
+            console.log("No user signed in");
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+    });
 </script>
     <style>
         :root {
@@ -1360,7 +1384,31 @@ function signIn() {
         });
 }
 
-function emergencyAdminLogin() {
+async function checkUserApproval(user) {
+    try {
+        const approvedDoc = await db.collection('approvedUsers').doc(user.uid).get();
+        
+        if (!approvedDoc.exists || !approvedDoc.data().approved) {
+            console.log("User not approved");
+            await auth.signOut();
+            showToast('Your account is pending admin approval', 'warning');
+            return;
+        }
+        
+        // User is approved, show the app
+        document.getElementById('authModal').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        
+        // Load data
+        await initializeDatabase();
+        await checkAdminStatus();
+        
+    } catch (error) {
+        console.error("Error checking approval:", error);
+        showToast('Error checking account status', 'error');
+    }
+}
+    function emergencyAdminLogin() {
     // Only for development/testing - remove in production
     const email = prompt("Enter admin email:");
     const password = prompt("Enter admin password:");
@@ -2759,6 +2807,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
 
 
