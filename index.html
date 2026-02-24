@@ -1137,7 +1137,7 @@ function signIn() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     
-    console.log("Login attempt:", email); // Debug
+    console.log("Login attempt:", email);
     
     if (!email || !password) {
         showToast('Please enter email and password', 'error');
@@ -1147,16 +1147,66 @@ function signIn() {
     auth.signInWithEmailAndPassword(email, password)
         .then(async (userCredential) => {
             currentUser = userCredential.user;
-            console.log("Login successful:", currentUser.email); // Debug
+            console.log("Login successful:", currentUser.email);
+            console.log("User UID:", currentUser.uid);
             
-            // Check if user is approved...
+            try {
+                // Check if user is approved
+                console.log("Checking approval status...");
+                const approvedDoc = await db.collection('approvedUsers').doc(currentUser.uid).get();
+                
+                console.log("Approved doc exists:", approvedDoc.exists);
+                if (approvedDoc.exists) {
+                    console.log("Approved data:", approvedDoc.data());
+                }
+                
+                if (!approvedDoc.exists || !approvedDoc.data().approved) {
+                    console.log("User not approved, signing out...");
+                    await auth.signOut();
+                    showToast('Your account is pending admin approval', 'warning');
+                    return;
+                }
+                
+                // ✅ SUCCESS - Hide auth modal and show main app
+                console.log("User approved, showing main app...");
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = currentUser.email;
+                
+                // Load data from Firestore
+                await initializeDatabase();
+                
+                // Check if user is admin
+                await checkAdminStatus();
+                
+                showToast('Welcome back!', 'success');
+                
+            } catch (error) {
+                console.error("Approval check error:", error);
+                showToast('Error checking account status: ' + error.message, 'error');
+                await auth.signOut();
+            }
         })
         .catch((error) => {
-            console.error("Firebase Auth Error:", error.code, error.message); // Debug
-            showToast('Login failed: ' + error.message, 'error');
+            console.error("Firebase Auth Error:", error.code, error.message);
+            
+            // User-friendly error messages
+            let errorMessage = error.message;
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email. Please sign up first.';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password. Please try again.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (error.code === 'auth/invalid-credential') {
+                errorMessage = 'Invalid email or password. Please check your credentials.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many failed attempts. Please try again later.';
+            }
+            
+            showToast('Login failed: ' + errorMessage, 'error');
         });
 }
-
 function signUp() {
     const email = document.getElementById('authEmail').value;
     const password = document.getElementById('authPassword').value;
@@ -1165,7 +1215,17 @@ function signUp() {
         showToast('Please enter email and password', 'error');
         return;
     }
-
+function emergencyAdminLogin() {
+    // Only for development/testing - remove in production
+    const email = prompt("Enter admin email:");
+    const password = prompt("Enter admin password:");
+    
+    if (email && password) {
+        document.getElementById('authEmail').value = email;
+        document.getElementById('authPassword').value = password;
+        signIn();
+    }
+}
     auth.createUserWithEmailAndPassword(email, password)
         .then(async (userCredential) => {
             const user = userCredential.user;
@@ -2359,6 +2419,7 @@ window.addEventListener('online', () => {
 </script>
 </body>
 </html>
+
 
 
 
