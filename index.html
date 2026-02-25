@@ -13,47 +13,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-<script>
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
-  authDomain: "queensland-business-reporting.firebaseapp.com",
-  projectId: "queensland-business-reporting",
-  storageBucket: "queensland-business-reporting.firebasestorage.app",
-  messagingSenderId: "271437640355",
-  appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
-  measurementId: "G-XE0LCMYLC5"
-    };
-    
-// Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-    
-    // ✅ ADD THIS: Set auth persistence to LOCAL
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-        .catch((error) => {
-            console.error("Auth persistence error:", error);
-        });
-    
-    // ✅ ADD THIS: Listen for auth state changes
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            // User is signed in
-            console.log("User already signed in:", user.email);
-            currentUser = user;
-            document.getElementById('userEmail').textContent = user.email;
-            
-            // Check if approved and show app
-            checkUserApproval(user);
-        } else {
-            // No user signed in, show auth modal
-            console.log("No user signed in");
-            document.getElementById('authModal').classList.remove('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
-        }
-    });
-</script>
     <style>
         :root {
             --qld-maroon: #771414;
@@ -223,7 +182,6 @@ const firebaseConfig = {
             border-left: 4px solid #3b82f6;
         }
 
-        /* Category-specific card borders */
         .crm-contact-card.category-council { border-left-color: #3b82f6; }
         .crm-contact-card.category-supplier { border-left-color: #10b981; }
         .crm-contact-card.category-contractor { border-left-color: #f59e0b; }
@@ -260,7 +218,6 @@ const firebaseConfig = {
             border-left: 4px solid #ef4444;
         }
 
-        /* Category badge styles */
         .category-badge {
             display: inline-flex;
             align-items: center;
@@ -275,7 +232,6 @@ const firebaseConfig = {
         .category-contractor { background: #fef3c7; color: #92400e; }
         .category-competitor { background: #fee2e2; color: #991b1b; }
 
-        /* Zone Filter Button Colors */
         .zone-filter[data-zone="SEQ"].active { background-color: #771414 !important; color: white !important; }
         .zone-filter[data-zone="NQ"].active { background-color: #0369a1 !important; color: white !important; }
         .zone-filter[data-zone="CQ"].active { background-color: #059669 !important; color: white !important; }
@@ -283,7 +239,6 @@ const firebaseConfig = {
         .zone-filter[data-zone="FNQ"].active { background-color: #10b981 !important; color: white !important; }
         .zone-filter[data-zone="GULF"].active { background-color: #8b5cf6 !important; color: white !important; }
     </style>
-<base target="_blank">
 </head>
 <body class="text-gray-800 min-h-screen">
 
@@ -292,68 +247,61 @@ const firebaseConfig = {
         <i class="fas fa-wifi-slash mr-2"></i> You're offline. Changes will sync when you reconnect.
     </div>
 
-  <!-- Auth Modal -->
-<div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-[#771414] to-[#9f1c1c] rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4">
-                <i class="fas fa-building"></i>
-            </div>
-            <h2 class="text-2xl font-bold display-font">QLD Pipeline and CRM</h2>
-            <p class="text-gray-500 mt-2">All 77 Local Government Areas</p>
-        </div>
-
-        <div id="authForm">
-            <!-- FIXED: Added autocomplete attributes for proper browser autofill -->
-            <div class="mb-3">
-                <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                <input type="email" 
-                       id="authEmail" 
-                       name="email"
-                       autocomplete="email" 
-                       placeholder="your@email.com" 
-                       class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-            </div>
-            
-            <div class="mb-4">
-                <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" 
-                       id="authPassword" 
-                       name="password"
-                       autocomplete="current-password" 
-                       placeholder="••••••••" 
-                       class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
-            </div>
-
-            <button type="button" onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
-                Sign In
-            </button>
-
-            <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
-                Create Account
-            </button>
-
-            <div class="relative mb-4">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-gray-300"></div>
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-[#771414] to-[#9f1c1c] rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-4">
+                    <i class="fas fa-building"></i>
                 </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-2 bg-white text-gray-500">or</span>
-                </div>
+                <h2 class="text-2xl font-bold display-font">QLD Pipeline and CRM</h2>
+                <p class="text-gray-500 mt-2">All 77 Local Government Areas</p>
             </div>
 
-            <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
-                <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
-            </button>
+            <div id="authForm">
+                <div class="mb-3">
+                    <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                    <input type="email" 
+                           id="authEmail" 
+                           name="email"
+                           autocomplete="email" 
+                           placeholder="your@email.com" 
+                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" 
+                           id="authPassword" 
+                           name="password"
+                           autocomplete="current-password" 
+                           placeholder="••••••••" 
+                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
+                </div>
 
-            <button onclick="emergencyAdminLogin()" style="display:none;" id="emergencyBtn">Emergency Admin</button>
+                <button type="button" onclick="signIn()" class="w-full py-3 bg-[#771414] text-white rounded-lg font-medium hover:bg-[#5a1010] transition-colors mb-3">
+                    Sign In
+                </button>
 
-            <p class="text-xs text-center text-gray-400 mt-4">
-                Demo mode stores data locally on your device. No account required.
-            </p>
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                </div>
+
+                <button onclick="enterDemoMode()" class="w-full py-3 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
+                </button>
+
+                <p class="text-xs text-center text-gray-400 mt-4">
+                    Demo mode stores data locally on your device. No account required.
+                </p>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- Main App (Hidden until auth or demo) -->
     <div id="mainApp" class="hidden">
@@ -382,7 +330,6 @@ const firebaseConfig = {
                     </div>
 
                     <div class="flex items-center space-x-4">
-                        <!-- Admin Button - Hidden by default -->
                         <button id="adminButton" onclick="showAdminPanel()" class="hidden px-4 py-2 bg-[#771414] text-white rounded-lg hover:bg-[#5a1010] text-sm font-medium transition-colors shadow-sm">
                             <i class="fas fa-shield-alt mr-2"></i> Admin
                         </button>
@@ -505,7 +452,6 @@ const firebaseConfig = {
                             <p class="text-sm text-gray-500 mt-1">Browse by zone or search all 77 Queensland LGAs</p>
                         </div>
 
-                        <!-- Zone Filter -->
                         <div class="flex flex-wrap gap-2">
                             <button onclick="filterByZone('all')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-[#771414] text-white shadow-md transition-all" data-zone="all">
                                 All Zones
@@ -531,10 +477,8 @@ const firebaseConfig = {
                         </div>
                     </div>
 
-                    <!-- Region Tabs Container -->
                     <div class="region-group rounded-xl p-4 mb-6">
                         <div class="flex space-x-2 overflow-x-auto pb-2 region-scroll" id="regionTabs" style="max-height: 200px; flex-wrap: wrap;">
-                            <!-- Tabs injected by JS -->
                         </div>
                     </div>
 
@@ -553,7 +497,6 @@ const firebaseConfig = {
                     <p class="text-gray-600">Manage all your council contacts, suppliers, contractors, and competitors across all 77 LGAs.</p>
                 </div>
 
-                <!-- CRM Stats - Updated with Categories -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                     <div class="bg-blue-50 rounded-xl p-5 border border-blue-100">
                         <div class="flex items-center justify-between">
@@ -602,7 +545,6 @@ const firebaseConfig = {
                     </div>
                 </div>
 
-                <!-- CRM Filters - Updated with Category Filter -->
                 <div class="flex flex-col md:flex-row gap-4 mb-6">
                     <div class="flex-1">
                         <input type="text" id="crmSearch" placeholder="Search contacts by name, position, or organization..." 
@@ -618,16 +560,13 @@ const firebaseConfig = {
                     </select>
                     <select id="crmRegionFilter" onchange="filterCRM()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
                         <option value="all">All Regions</option>
-                        <!-- Options populated by JS -->
                     </select>
                     <button onclick="showAddCRMModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium whitespace-nowrap">
                         <i class="fas fa-plus mr-2"></i> Add Contact
                     </button>
                 </div>
 
-                <!-- CRM Contacts List -->
                 <div id="crmContactsList" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Populated by JS -->
                 </div>
             </div>
 
@@ -638,9 +577,7 @@ const firebaseConfig = {
                     <p class="text-gray-600">Track your win rates, pricing performance, and pipeline value across all regions.</p>
                 </div>
 
-                <!-- Analytics Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Win Rate Card -->
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                         <h3 class="text-lg font-bold mb-4">Win Rate Analysis</h3>
                         <div class="space-y-4">
@@ -663,7 +600,6 @@ const firebaseConfig = {
                         </div>
                     </div>
 
-                    <!-- Pipeline Value Card -->
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                         <h3 class="text-lg font-bold mb-4">Pipeline Value</h3>
                         <div class="space-y-4">
@@ -687,11 +623,9 @@ const firebaseConfig = {
                     </div>
                 </div>
 
-                <!-- Region Performance -->
                 <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                     <h3 class="text-lg font-bold mb-4">Performance by Region</h3>
                     <div id="regionPerformanceList" class="space-y-3">
-                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
@@ -756,7 +690,6 @@ const firebaseConfig = {
                             <input type="date" id="tenderClosingDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none">
                         </div>
 
-                        <!-- PRICED Fields -->
                         <div id="pricedFields" class="col-span-2 hidden border-t pt-4 mt-2">
                             <h4 class="font-semibold text-green-700 mb-3 flex items-center">
                                 <i class="fas fa-check-circle mr-2"></i> Pricing Details
@@ -773,7 +706,6 @@ const firebaseConfig = {
                             </div>
                         </div>
 
-                        <!-- NOT PRICING Fields -->
                         <div id="notPricingFields" class="col-span-2 hidden border-t pt-4 mt-2">
                             <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
                                 <i class="fas fa-ban mr-2"></i> Reason for Not Pricing
@@ -798,7 +730,6 @@ const firebaseConfig = {
                             </div>
                         </div>
 
-                        <!-- AWARDED Fields -->
                         <div id="awardedFields" class="col-span-2 hidden border-t pt-4 mt-2">
                             <h4 class="font-semibold text-yellow-700 mb-3 flex items-center">
                                 <i class="fas fa-trophy mr-2"></i> Award Details
@@ -819,7 +750,6 @@ const firebaseConfig = {
                             </div>
                         </div>
 
-                        <!-- NOT WON Fields -->
                         <div id="notWonFields" class="col-span-2 hidden border-t pt-4 mt-2">
                             <h4 class="font-semibold text-red-700 mb-3 flex items-center">
                                 <i class="fas fa-times-circle mr-2"></i> Competitor Information
@@ -878,24 +808,23 @@ const firebaseConfig = {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
                             <textarea id="tenderDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-[#771414] focus:outline-none"></textarea>
                         </div>
+                        
                         <div class="col-span-2 border-t pt-4 mt-2">
-    <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
-        <i class="fas fa-comments mr-2 text-purple-600"></i> Comments & History
-    </h4>
-    
-    <!-- Existing Comments Display -->
-    <div id="tenderCommentsList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
-        <!-- Populated by JS -->
-    </div>
-    
-    <!-- Add New Comment -->
-    <div class="bg-gray-50 rounded-lg p-3">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Add Update/Comment</label>
-        <textarea id="newTenderComment" rows="2" placeholder="Enter update or comment..." class="w-full rounded-lg px-3 py-2 border-2 border-gray-200 focus:border-purple-500 focus:outline-none text-sm mb-2"></textarea>
-        <button type="button" onclick="addTenderComment()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
-            <i class="fas fa-plus mr-1"></i> Add Comment
-        </button>
-    </div>
+                            <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
+                                <i class="fas fa-comments mr-2 text-purple-600"></i> Comments & History
+                            </h4>
+                            
+                            <div id="tenderCommentsList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Add Update/Comment</label>
+                                <textarea id="newTenderComment" rows="2" placeholder="Enter update or comment..." class="w-full rounded-lg px-3 py-2 border-2 border-gray-200 focus:border-purple-500 focus:outline-none text-sm mb-2"></textarea>
+                                <button type="button" onclick="addTenderComment()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
+                                    <i class="fas fa-plus mr-1"></i> Add Comment
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4 border-t">
@@ -908,7 +837,7 @@ const firebaseConfig = {
             </div>
         </div>
 
-        <!-- CRM Contact Modal - Updated with Category Field -->
+        <!-- CRM Contact Modal -->
         <div id="crmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
@@ -922,7 +851,6 @@ const firebaseConfig = {
                     <input type="hidden" id="crmContactId">
 
                     <div class="grid grid-cols-2 gap-4">
-                        <!-- Category Field - NEW -->
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                             <select id="crmCategory" required onchange="handleCategoryChange()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
@@ -937,7 +865,6 @@ const firebaseConfig = {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Region</label>
                             <select id="crmRegion" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
                                 <option value="">Select Region...</option>
-                                <!-- Populated by JS -->
                             </select>
                             <p class="text-xs text-gray-500 mt-1" id="regionHelp">Required for Council contacts</p>
                         </div>
@@ -987,7 +914,7 @@ const firebaseConfig = {
 
                         <div class="col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">LinkedIn Profile</label>
-                            <input type="url" id="crmLinkedIn" placeholder="https://linkedin.com/in/ ..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                            <input type="url" id="crmLinkedIn" placeholder="https://linkedin.com/in/..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
                         </div>
 
                         <div class="col-span-2">
@@ -1109,7 +1036,7 @@ const firebaseConfig = {
             <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
                     <h3 class="text-xl font-bold display-font flex items-center">
-                        <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Approval Panel
+                        <i class="fas fa-shield-alt mr-2 text-[#771414]"></i> Admin Panel
                     </h3>
                     <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times text-xl"></i>
@@ -1118,23 +1045,13 @@ const firebaseConfig = {
 
                 <div class="p-6">
                     <div class="mb-6">
-                        <h4 class="font-semibold text-gray-900 mb-2">Pending Approval Requests</h4>
-                        <p class="text-sm text-gray-500">Review and approve new user registrations</p>
+                        <h4 class="font-semibold text-gray-900 mb-2">User Management</h4>
+                        <p class="text-sm text-gray-500">Manage approved users</p>
                     </div>
 
-                    <div id="pendingApprovalsList" class="space-y-4">
-                        <div class="text-center py-8 text-gray-400">
-                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                            <p>Loading requests...</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-8 pt-6 border-t">
-                        <h4 class="font-semibold text-gray-900 mb-2">Approved Users</h4>
-                        <div id="approvedUsersList" class="space-y-2">
-                            <div class="text-center py-4 text-gray-400">
-                                <p>Loading approved users...</p>
-                            </div>
+                    <div id="approvedUsersList" class="space-y-2">
+                        <div class="text-center py-4 text-gray-400">
+                            <p>Loading users...</p>
                         </div>
                     </div>
                 </div>
@@ -1152,9 +1069,10 @@ const firebaseConfig = {
             </button>
         </div>
     </div>
-<!-- Add this in the <head> section, BEFORE your other scripts -->
+
 <script>
 // ==================== GLOBAL VARIABLES ====================
+// CRITICAL: Declare these BEFORE Firebase config
 let currentUser = null;
 let isDemoMode = false;
 let currentRegion = null;
@@ -1164,6 +1082,43 @@ let database = {
     crmContacts: [],
     interactions: []
 };
+
+// Firebase Config
+const firebaseConfig = {
+    apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
+    authDomain: "queensland-business-reporting.firebaseapp.com",
+    projectId: "queensland-business-reporting",
+    storageBucket: "queensland-business-reporting.firebasestorage.app",
+    messagingSenderId: "271437640355",
+    appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
+    measurementId: "G-XE0LCMYLC5"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Set auth persistence
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .catch((error) => {
+        console.error("Auth persistence error:", error);
+    });
+
+// Auth state listener
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Auth state: User signed in", user.email);
+        currentUser = user;
+        document.getElementById('userEmail').textContent = user.email;
+        checkUserApproval(user);
+    } else {
+        console.log("Auth state: No user signed in");
+        currentUser = null;
+        document.getElementById('authModal').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+    }
+});
 
 // Safe Currency Parsing Functions
 function parseCurrency(value) {
@@ -1222,7 +1177,6 @@ function formatDateForInput(dateStr) {
 
 // Queensland Regions Data (77 LGAs)
 const qldRegions = [
-    // SOUTH EAST QUEENSLAND (SEQ) - 17 LGAs
     { id: 'SEQ-BCC', name: 'Brisbane City Council', zone: 'SEQ' },
     { id: 'SEQ-GC', name: 'Gold Coast City', zone: 'SEQ' },
     { id: 'SEQ-ISC', name: 'Ipswich City', zone: 'SEQ' },
@@ -1240,8 +1194,6 @@ const qldRegions = [
     { id: 'SEQ-SBRC', name: 'South Burnett Regional', zone: 'SEQ' },
     { id: 'SEQ-NBRC', name: 'North Burnett Regional', zone: 'SEQ' },
     { id: 'SEQ-CRC', name: 'Cherbourg Aboriginal Shire', zone: 'SEQ' },
-    
-    // NORTH QUEENSLAND (NQ) - 16 LGAs
     { id: 'NQ-TC', name: 'Townsville City', zone: 'NQ' },
     { id: 'NQ-CC', name: 'Cairns Regional', zone: 'NQ' },
     { id: 'NQ-MRC', name: 'Mackay Regional', zone: 'NQ' },
@@ -1258,15 +1210,11 @@ const qldRegions = [
     { id: 'NQ-MC', name: 'McKinlay Shire', zone: 'NQ' },
     { id: 'NQ-CAR', name: 'Carpentaria Shire', zone: 'NQ' },
     { id: 'NQ-CRO', name: 'Croydon Shire', zone: 'NQ' },
-    
-    // CENTRAL QUEENSLAND (CQ) - 6 LGAs
     { id: 'CQ-BRC', name: 'Bundaberg Regional', zone: 'CQ' },
     { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ' },
     { id: 'CQ-GV', name: 'Gympie Regional', zone: 'CQ' },
     { id: 'CQ-FCRC', name: 'Fraser Coast Regional', zone: 'CQ' },
     { id: 'CQ-BAN', name: 'Banana Shire', zone: 'CQ' },
-    
-    // SOUTH WEST QUEENSLAND (SWQ) - 10 LGAs
     { id: 'SWQ-WRC', name: 'Western Downs Regional', zone: 'SWQ' },
     { id: 'SWQ-MC', name: 'Maranoa Regional', zone: 'SWQ' },
     { id: 'SWQ-BS', name: 'Balonne Shire', zone: 'SWQ' },
@@ -1277,8 +1225,6 @@ const qldRegions = [
     { id: 'SWQ-BA', name: 'Barcoo Shire', zone: 'SWQ' },
     { id: 'SWQ-BO', name: 'Boulia Shire', zone: 'SWQ' },
     { id: 'SWQ-DI', name: 'Diamantina Shire', zone: 'SWQ' },
-    
-    // FAR NORTH QUEENSLAND (FNQ) - 19 LGAs
     { id: 'FNQ-TC', name: 'Tablelands Regional', zone: 'FNQ' },
     { id: 'FNQ-MC', name: 'Mareeba Shire', zone: 'FNQ' },
     { id: 'FNQ-DT', name: 'Douglas Shire', zone: 'FNQ' },
@@ -1297,8 +1243,6 @@ const qldRegions = [
     { id: 'FNQ-TI', name: 'Torres Strait Island Regional', zone: 'FNQ' },
     { id: 'FNQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FNQ' },
     { id: 'FNQ-YA', name: 'Yarrabah Aboriginal Shire', zone: 'FNQ' },
-    
-    // GULF COUNTRY - 4 LGAs
     { id: 'GULF-BS', name: 'Burke Shire', zone: 'GULF' },
     { id: 'GULF-DO', name: 'Doomadgee Aboriginal Shire', zone: 'GULF' },
     { id: 'GULF-GC', name: 'Gregory Shire', zone: 'GULF' }
@@ -1321,25 +1265,18 @@ function signIn() {
         .then(async (userCredential) => {
             currentUser = userCredential.user;
             console.log("Login successful:", currentUser.email);
-            console.log("User UID:", currentUser.uid);
             
             try {
-                console.log("Checking approval status...");
                 const approvedDoc = await db.collection('approvedUsers').doc(currentUser.uid).get();
-                
-                console.log("Approved doc exists:", approvedDoc.exists);
-                if (approvedDoc.exists) {
-                    console.log("Approved data:", approvedDoc.data());
-                }
                 
                 if (!approvedDoc.exists || !approvedDoc.data().approved) {
                     console.log("User not approved, signing out...");
                     await auth.signOut();
-                    showToast('Your account is pending admin approval', 'warning');
+                    currentUser = null;
+                    showToast('Your account is not authorized. Contact admin.', 'error');
                     return;
                 }
                 
-                console.log("User approved, showing main app...");
                 document.getElementById('authModal').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = currentUser.email;
@@ -1353,6 +1290,7 @@ function signIn() {
                 console.error("Approval check error:", error);
                 showToast('Error checking account status: ' + error.message, 'error');
                 await auth.signOut();
+                currentUser = null;
             }
         })
         .catch((error) => {
@@ -1360,13 +1298,13 @@ function signIn() {
             
             let errorMessage = error.message;
             if (error.code === 'auth/user-not-found') {
-                errorMessage = 'No account found with this email. Please sign up first.';
+                errorMessage = 'No account found with this email.';
             } else if (error.code === 'auth/wrong-password') {
-                errorMessage = 'Incorrect password. Please try again.';
+                errorMessage = 'Incorrect password.';
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'Please enter a valid email address.';
             } else if (error.code === 'auth/invalid-credential') {
-                errorMessage = 'Invalid email or password. Please check your credentials.';
+                errorMessage = 'Invalid email or password.';
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = 'Too many failed attempts. Please try again later.';
             }
@@ -1382,7 +1320,8 @@ async function checkUserApproval(user) {
         if (!approvedDoc.exists || !approvedDoc.data().approved) {
             console.log("User not approved");
             await auth.signOut();
-            showToast('Your account is pending admin approval', 'warning');
+            currentUser = null;
+            showToast('Your account is not authorized. Contact admin.', 'error');
             return;
         }
         
@@ -1395,71 +1334,6 @@ async function checkUserApproval(user) {
     } catch (error) {
         console.error("Error checking approval:", error);
         showToast('Error checking account status', 'error');
-    }
-}
-
-function emergencyAdminLogin() {
-    const email = prompt("Enter admin email:");
-    const password = prompt("Enter admin password:");
-    
-    if (email && password) {
-        document.getElementById('authEmail').value = email;
-        document.getElementById('authPassword').value = password;
-        signIn();
-    }
-}
-
-// FIXED: Sign up function now properly creates account and shows pending message
-async function signUp() {
-    const email = document.getElementById('authEmail').value.trim();
-    const password = document.getElementById('authPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please enter email and password', 'error');
-        return;
-    }
-
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'error');
-        return;
-    }
-
-    try {
-        // Create the user account
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        // Create approval request
-        await db.collection('approvalRequests').doc(user.uid).set({
-            uid: user.uid,
-            email: email,
-            status: 'pending',
-            requestedAt: new Date().toISOString()
-        });
-        
-        // Sign out immediately after creation (they need approval)
-        await auth.signOut();
-        currentUser = null;
-        
-        // Clear form
-        document.getElementById('authEmail').value = '';
-        document.getElementById('authPassword').value = '';
-        
-        showToast('Account created successfully! Please wait for admin approval before signing in.', 'success');
-        
-    } catch (error) {
-        console.error("Signup error:", error);
-        
-        let errorMessage = error.message;
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'This email is already registered. Please sign in instead.';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Please enter a valid email address.';
-        } else if (error.code === 'auth/weak-password') {
-            errorMessage = 'Password is too weak. Please use at least 6 characters.';
-        }
-        
-        showToast('Sign up failed: ' + errorMessage, 'error');
     }
 }
 
@@ -1488,6 +1362,7 @@ function signOut() {
         database = { tenders: [], crmContacts: [], interactions: [] };
     } else {
         auth.signOut();
+        currentUser = null;
     }
     
     document.getElementById('mainApp').classList.add('hidden');
@@ -1502,6 +1377,7 @@ async function checkIfAdmin() {
     
     try {
         const adminDoc = await db.collection('admins').doc(currentUser.uid).get();
+        console.log("Admin check:", adminDoc.exists);
         return adminDoc.exists;
     } catch (error) {
         console.error("Error checking admin status:", error);
@@ -1515,7 +1391,7 @@ async function checkAdminStatus() {
         const adminButton = document.getElementById('adminButton');
         if (isAdmin) {
             adminButton.classList.remove('hidden');
-            console.log("Admin status confirmed - button shown");
+            console.log("Admin button shown");
         } else {
             adminButton.classList.add('hidden');
         }
@@ -1532,15 +1408,12 @@ async function initializeDatabase() {
     try {
         updateSyncStatus('Loading...');
         
-        // Load tenders
         const tendersSnapshot = await db.collection('tenders').get();
         database.tenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Load CRM contacts
         const contactsSnapshot = await db.collection('crmContacts').get();
         database.crmContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Load interactions
         const interactionsSnapshot = await db.collection('interactions').get();
         database.interactions = interactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
@@ -1562,19 +1435,16 @@ async function saveData() {
     updateSyncStatus('Syncing...');
     
     try {
-        // Save all tenders to Firestore
         for (const tender of database.tenders) {
             const tenderRef = db.collection('tenders').doc(String(tender.id));
             await tenderRef.set(tender);
         }
         
-        // Save all contacts to Firestore
         for (const contact of database.crmContacts) {
             const contactRef = db.collection('crmContacts').doc(String(contact.id));
             await contactRef.set(contact);
         }
         
-        // Save all interactions to Firestore
         for (const interaction of database.interactions) {
             const interactionRef = db.collection('interactions').doc(String(interaction.id));
             await interactionRef.set(interaction);
@@ -1621,7 +1491,7 @@ function populateRegionFilters() {
         
         const firstOption = select.options[0];
         select.innerHTML = '';
-        select.appendChild(firstOption);
+        if (firstOption) select.appendChild(firstOption);
         
         qldRegions.forEach(region => {
             const option = document.createElement('option');
@@ -1810,7 +1680,6 @@ function editTender(id) {
     document.getElementById('tenderModal').classList.remove('hidden');
 }
 
-// FIXED: Delete tender now properly removes from Firestore
 async function deleteTender(id) {
     const tender = database.tenders.find(t => t.id === id);
     if (!tender) return;
@@ -1820,15 +1689,12 @@ async function deleteTender(id) {
     }
 
     try {
-        // Remove from Firestore first (if not demo mode)
         if (!isDemoMode && currentUser) {
             await db.collection('tenders').doc(String(id)).delete();
         }
         
-        // Remove from local database
         database.tenders = database.tenders.filter(t => t.id !== id);
         
-        // Save to localStorage for demo mode
         if (isDemoMode) {
             localStorage.setItem('qldCrmDemoData', JSON.stringify(database));
         }
@@ -1999,8 +1865,9 @@ async function saveTender(event) {
     }
 }
 
-// ==================== CRM FUNCTIONS WITH CATEGORIES ====================
+// ==================== CRM FUNCTIONS ====================
 
+// CRITICAL FIX: Added missing handleCategoryChange function
 function handleCategoryChange() {
     const category = document.getElementById('crmCategory').value;
     const regionField = document.getElementById('crmRegion');
@@ -2166,11 +2033,15 @@ function filterCRM() {
     renderCRMContacts();
 }
 
+// CRITICAL FIX: This function now works properly with handleCategoryChange
 function showAddCRMModal() {
     document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
     document.getElementById('crmContactId').value = '';
     document.getElementById('crmForm').reset();
+    
+    // CRITICAL: Call handleCategoryChange after reset to set proper defaults
     handleCategoryChange();
+    
     document.getElementById('crmModal').classList.remove('hidden');
 }
 
@@ -2201,7 +2072,6 @@ function editCRMContact(id) {
     document.getElementById('crmModal').classList.remove('hidden');
 }
 
-// FIXED: Delete CRM contact now properly removes from Firestore and all related data
 async function deleteCRMContact(id) {
     const contact = database.crmContacts.find(c => c.id === id);
     if (!contact) {
@@ -2216,12 +2086,9 @@ async function deleteCRMContact(id) {
     try {
         updateSyncStatus('Deleting...');
         
-        // 1. Delete from Firestore first (if not demo mode)
         if (!isDemoMode && currentUser) {
-            // Delete the contact document
             await db.collection('crmContacts').doc(String(id)).delete();
             
-            // Delete all interactions associated with this contact
             const interactionsSnapshot = await db.collection('interactions')
                 .where('contactId', '==', id)
                 .get();
@@ -2233,20 +2100,16 @@ async function deleteCRMContact(id) {
             await batch.commit();
         }
         
-        // 2. Remove from local database
         database.crmContacts = database.crmContacts.filter(c => c.id !== id);
         
-        // 3. Remove associated interactions from local database
         if (database.interactions) {
             database.interactions = database.interactions.filter(i => i.contactId !== id);
         }
         
-        // 4. Save to localStorage for demo mode
         if (isDemoMode) {
             localStorage.setItem('qldCrmDemoData', JSON.stringify(database));
         }
         
-        // 5. Refresh UI
         renderCRMContacts();
         updateAllStats();
         updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
@@ -2257,7 +2120,6 @@ async function deleteCRMContact(id) {
         updateSyncStatus('Error');
         showToast('Error deleting contact: ' + error.message, 'error');
         
-        // Reload data to ensure UI is in sync with database
         if (!isDemoMode) {
             await initializeDatabase();
         }
@@ -2569,11 +2431,16 @@ function shareReport() {
     }
 }
 
+// CRITICAL FIX: Added proper quickAdd function
 function quickAdd() {
     if (currentMainTab === 'tenders') {
         showAddTenderModal();
     } else if (currentMainTab === 'crm') {
         showAddCRMModal();
+    } else if (currentMainTab === 'analytics') {
+        // Switch to tenders tab and add tender
+        switchMainTab('tenders');
+        setTimeout(() => showAddTenderModal(), 100);
     }
 }
 
@@ -2605,7 +2472,6 @@ function showToast(message, type = 'info') {
 
 // ==================== ADMIN FUNCTIONS ====================
 
-// FIXED: Admin panel functions with proper error handling
 async function showAdminPanel() {
     console.log("Admin panel requested");
     
@@ -2619,7 +2485,6 @@ async function showAdminPanel() {
         }
 
         document.getElementById('adminPanel').classList.remove('hidden');
-        await loadPendingApprovals();
         await loadApprovedUsers();
         
     } catch (error) {
@@ -2630,59 +2495,6 @@ async function showAdminPanel() {
 
 function closeAdminPanel() {
     document.getElementById('adminPanel').classList.add('hidden');
-}
-
-async function loadPendingApprovals() {
-    try {
-        const snapshot = await db.collection('approvalRequests')
-            .where('status', '==', 'pending')
-            .orderBy('requestedAt', 'desc')
-            .get();
-
-        const container = document.getElementById('pendingApprovalsList');
-
-        if (snapshot.empty) {
-            container.innerHTML = `
-                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
-                    <p>No pending approval requests</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
-            return `
-            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                    <div class="font-semibold text-gray-900">${data.email}</div>
-                    <div class="text-sm text-gray-500">Requested: ${date}</div>
-                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
-                        <i class="fas fa-check mr-1"></i> Approve
-                    </button>
-                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
-                        <i class="fas fa-times mr-1"></i> Reject
-                    </button>
-                </div>
-            </div>
-            `;
-        }).join('');
-
-    } catch (err) {
-        console.error("Error loading approvals:", err);
-        document.getElementById('pendingApprovalsList').innerHTML = `
-            <div class="text-center py-8 text-red-500">
-                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                <p>Error loading requests. Check permissions.</p>
-                <p class="text-xs mt-2">${err.message}</p>
-            </div>
-        `;
-    }
 }
 
 async function loadApprovedUsers() {
@@ -2723,48 +2535,6 @@ async function loadApprovedUsers() {
     }
 }
 
-async function approveUser(uid, email) {
-    try {
-        await db.collection('approvedUsers').doc(uid).set({
-            email: email,
-            approved: true,
-            approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.email
-        });
-
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'approved',
-            approvedAt: new Date().toISOString()
-        });
-
-        showToast(`Approved ${email}`, 'success');
-        await loadPendingApprovals();
-        await loadApprovedUsers();
-
-    } catch (err) {
-        showToast('Error approving user: ' + err.message, 'error');
-    }
-}
-
-async function rejectUser(uid) {
-    if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
-        return;
-    }
-
-    try {
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'rejected',
-            rejectedAt: new Date().toISOString()
-        });
-
-        showToast('User rejected', 'info');
-        await loadPendingApprovals();
-
-    } catch (err) {
-        showToast('Error rejecting user: ' + err.message, 'error');
-    }
-}
-
 async function revokeAccess(uid) {
     if (!confirm('Are you sure you want to revoke this user\'s access?')) {
         return;
@@ -2799,27 +2569,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 });
-
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
