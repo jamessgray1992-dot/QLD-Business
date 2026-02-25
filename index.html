@@ -292,7 +292,7 @@ const firebaseConfig = {
         <i class="fas fa-wifi-slash mr-2"></i> You're offline. Changes will sync when you reconnect.
     </div>
 
-  <!-- Auth Modal -->
+ <!-- Auth Modal -->
 <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
         <div class="text-center mb-6">
@@ -304,7 +304,6 @@ const firebaseConfig = {
         </div>
 
         <div id="authForm">
-            <!-- FIXED: Added autocomplete attributes for proper browser autofill -->
             <div class="mb-3">
                 <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
                 <input type="email" 
@@ -329,10 +328,6 @@ const firebaseConfig = {
                 Sign In
             </button>
 
-            <button onclick="signUp()" class="w-full py-3 border-2 border-[#771414] text-[#771414] rounded-lg font-medium hover:bg-red-50 transition-colors mb-4">
-                Create Account
-            </button>
-
             <div class="relative mb-4">
                 <div class="absolute inset-0 flex items-center">
                     <div class="w-full border-t border-gray-300"></div>
@@ -346,15 +341,12 @@ const firebaseConfig = {
                 <i class="fas fa-play-circle mr-2"></i> Continue in Demo Mode
             </button>
 
-            <button onclick="emergencyAdminLogin()" style="display:none;" id="emergencyBtn">Emergency Admin</button>
-
             <p class="text-xs text-center text-gray-400 mt-4">
                 Demo mode stores data locally on your device. No account required.
             </p>
         </div>
     </div>
 </div>
-
     <!-- Main App (Hidden until auth or demo) -->
     <div id="mainApp" class="hidden">
 
@@ -1324,27 +1316,27 @@ function signIn() {
             console.log("User UID:", currentUser.uid);
             
             try {
-                console.log("Checking approval status...");
+                // Check if user is approved
                 const approvedDoc = await db.collection('approvedUsers').doc(currentUser.uid).get();
-                
-                console.log("Approved doc exists:", approvedDoc.exists);
-                if (approvedDoc.exists) {
-                    console.log("Approved data:", approvedDoc.data());
-                }
                 
                 if (!approvedDoc.exists || !approvedDoc.data().approved) {
                     console.log("User not approved, signing out...");
                     await auth.signOut();
-                    showToast('Your account is pending admin approval', 'warning');
+                    currentUser = null;
+                    showToast('Your account is not authorized. Contact admin.', 'error');
                     return;
                 }
                 
+                // SUCCESS - Hide auth modal and show main app
                 console.log("User approved, showing main app...");
                 document.getElementById('authModal').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userEmail').textContent = currentUser.email;
                 
+                // Load data from Firestore
                 await initializeDatabase();
+                
+                // Check if user is admin
                 await checkAdminStatus();
                 
                 showToast('Welcome back!', 'success');
@@ -1353,6 +1345,7 @@ function signIn() {
                 console.error("Approval check error:", error);
                 showToast('Error checking account status: ' + error.message, 'error');
                 await auth.signOut();
+                currentUser = null;
             }
         })
         .catch((error) => {
@@ -1360,13 +1353,13 @@ function signIn() {
             
             let errorMessage = error.message;
             if (error.code === 'auth/user-not-found') {
-                errorMessage = 'No account found with this email. Please sign up first.';
+                errorMessage = 'No account found with this email.';
             } else if (error.code === 'auth/wrong-password') {
-                errorMessage = 'Incorrect password. Please try again.';
+                errorMessage = 'Incorrect password.';
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'Please enter a valid email address.';
             } else if (error.code === 'auth/invalid-credential') {
-                errorMessage = 'Invalid email or password. Please check your credentials.';
+                errorMessage = 'Invalid email or password.';
             } else if (error.code === 'auth/too-many-requests') {
                 errorMessage = 'Too many failed attempts. Please try again later.';
             }
@@ -1375,93 +1368,18 @@ function signIn() {
         });
 }
 
-async function checkUserApproval(user) {
-    try {
-        const approvedDoc = await db.collection('approvedUsers').doc(user.uid).get();
-        
-        if (!approvedDoc.exists || !approvedDoc.data().approved) {
-            console.log("User not approved");
-            await auth.signOut();
-            showToast('Your account is pending admin approval', 'warning');
-            return;
-        }
-        
-        document.getElementById('authModal').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        
-        await initializeDatabase();
-        await checkAdminStatus();
-        
-    } catch (error) {
-        console.error("Error checking approval:", error);
-        showToast('Error checking account status', 'error');
-    }
-}
-
-function emergencyAdminLogin() {
-    const email = prompt("Enter admin email:");
-    const password = prompt("Enter admin password:");
-    
-    if (email && password) {
-        document.getElementById('authEmail').value = email;
-        document.getElementById('authPassword').value = password;
-        signIn();
-    }
-}
-
-// FIXED: Sign up function now properly creates account and shows pending message
-async function signUp() {
-    const email = document.getElementById('authEmail').value.trim();
-    const password = document.getElementById('authPassword').value;
-    
-    if (!email || !password) {
-        showToast('Please enter email and password', 'error');
-        return;
-    }
-
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'error');
-        return;
-    }
-
-    try {
-        // Create the user account
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        // Create approval request
-        await db.collection('approvalRequests').doc(user.uid).set({
-            uid: user.uid,
-            email: email,
-            status: 'pending',
-            requestedAt: new Date().toISOString()
-        });
-        
-        // Sign out immediately after creation (they need approval)
-        await auth.signOut();
+// Listen for auth state changes
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Auth state: User signed in", user.email);
+        // Don't auto-show app here - let signIn() handle the approval check
+    } else {
+        console.log("Auth state: No user signed in");
         currentUser = null;
-        
-        // Clear form
-        document.getElementById('authEmail').value = '';
-        document.getElementById('authPassword').value = '';
-        
-        showToast('Account created successfully! Please wait for admin approval before signing in.', 'success');
-        
-    } catch (error) {
-        console.error("Signup error:", error);
-        
-        let errorMessage = error.message;
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'This email is already registered. Please sign in instead.';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Please enter a valid email address.';
-        } else if (error.code === 'auth/weak-password') {
-            errorMessage = 'Password is too weak. Please use at least 6 characters.';
-        }
-        
-        showToast('Sign up failed: ' + errorMessage, 'error');
+        document.getElementById('authModal').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
     }
-}
+});
 
 function enterDemoMode() {
     isDemoMode = true;
@@ -1488,6 +1406,7 @@ function signOut() {
         database = { tenders: [], crmContacts: [], interactions: [] };
     } else {
         auth.signOut();
+        currentUser = null;
     }
     
     document.getElementById('mainApp').classList.add('hidden');
@@ -1502,6 +1421,7 @@ async function checkIfAdmin() {
     
     try {
         const adminDoc = await db.collection('admins').doc(currentUser.uid).get();
+        console.log("Admin check:", adminDoc.exists);
         return adminDoc.exists;
     } catch (error) {
         console.error("Error checking admin status:", error);
@@ -1515,7 +1435,7 @@ async function checkAdminStatus() {
         const adminButton = document.getElementById('adminButton');
         if (isAdmin) {
             adminButton.classList.remove('hidden');
-            console.log("Admin status confirmed - button shown");
+            console.log("Admin button shown");
         } else {
             adminButton.classList.add('hidden');
         }
@@ -1746,1063 +1666,11 @@ function renderTenderCard(tender) {
         <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 cursor-pointer" onclick="editTender(${tender.id})">${tender.title}</h3>
         <div class="text-sm text-gray-600 mb-2">${tender.value || 'No value set'}</div>
         <div class="flex justify-between items-center">
-            ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> ${formatDate(tender.closingDate)}</div>` : '<div></div>'}
-            ${commentCount > 0 ? `<div class="text-xs text-blue-600 font-medium"><i class="fas fa-comments mr-1"></i> ${commentCount}</div>` : ''}
-        </div>
-    </div>
-    `;
-}
-
-function showAddTenderModal(regionId) {
-    document.getElementById('tenderModalTitle').textContent = 'Add New Tender';
-    document.getElementById('tenderForm').reset();
-    document.getElementById('tenderId').value = '';
-    document.getElementById('tenderRegion').value = regionId || currentRegion;
-    
-    document.getElementById('pricedFields').classList.add('hidden');
-    document.getElementById('notPricingFields').classList.add('hidden');
-    document.getElementById('awardedFields').classList.add('hidden');
-    document.getElementById('notWonFields').classList.add('hidden');
-
-    renderTenderComments(null);
-    document.getElementById('tenderModal').classList.remove('hidden');
-}
-
-function editTender(id) {
-    const tender = database.tenders.find(t => t.id === id);
-    if (!tender) return;
-    
-    document.getElementById('tenderModalTitle').textContent = 'Edit Tender';
-    document.getElementById('tenderId').value = id;
-    document.getElementById('tenderRegion').value = tender.regionId;
-    document.getElementById('tenderTitle').value = tender.title;
-    document.getElementById('tenderCategory').value = tender.category;
-    document.getElementById('tenderStatus').value = tender.status;
-    document.getElementById('tenderValue').value = tender.value || '';
-    document.getElementById('tenderClosingDate').value = tender.closingDate || '';
-    document.getElementById('tenderDescription').value = tender.description || '';
-    document.getElementById('tenderContactName').value = tender.contact?.name || '';
-    document.getElementById('tenderContactPosition').value = tender.contact?.position || '';
-    document.getElementById('tenderContactEmail').value = tender.contact?.email || '';
-    document.getElementById('tenderContactPhone').value = tender.contact?.phone || '';
-    
-    togglePricingFields();
-    
-    if (tender.status === 'PRICED') {
-        document.getElementById('ourPrice').value = tender.ourPrice || '';
-        document.getElementById('submissionDate').value = tender.submissionDate || '';
-    } else if (tender.status === 'NOT_PRICING') {
-        document.getElementById('notPricingReason').value = tender.notPricingReason || '';
-        document.getElementById('notPricingComments').value = tender.notPricingComments || '';
-    } else if (tender.status === 'AWARDED') {
-        document.getElementById('awardedDate').value = tender.awardedDate || '';
-        document.getElementById('awardedValue').value = tender.awardedValue || '';
-        document.getElementById('awardedScope').value = tender.awardedScope || '';
-    } else if (tender.status === 'NOT_WON') {
-        document.getElementById('winnerName').value = tender.winnerName || '';
-        document.getElementById('winnerPrice').value = tender.winnerPrice || '';
-        document.getElementById('ourLosingPrice').value = tender.ourLosingPrice || '';
-        document.getElementById('resultDate').value = tender.resultDate || '';
-        document.getElementById('notWonComments').value = tender.notWonComments || '';
-    }
-    
-    renderTenderComments(id);
-    document.getElementById('tenderModal').classList.remove('hidden');
-}
-
-// FIXED: Delete tender now properly removes from Firestore
-async function deleteTender(id) {
-    const tender = database.tenders.find(t => t.id === id);
-    if (!tender) return;
-
-    if (!confirm(`Are you sure you want to delete "${tender.title}"?\n\nThis action cannot be undone.`)) {
-        return;
-    }
-
-    try {
-        // Remove from Firestore first (if not demo mode)
-        if (!isDemoMode && currentUser) {
-            await db.collection('tenders').doc(String(id)).delete();
-        }
-        
-        // Remove from local database
-        database.tenders = database.tenders.filter(t => t.id !== id);
-        
-        // Save to localStorage for demo mode
-        if (isDemoMode) {
-            localStorage.setItem('qldCrmDemoData', JSON.stringify(database));
-        }
-        
-        loadRegion(tender.regionId);
-        updateAllStats();
-        showToast('Tender deleted successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error deleting tender:', error);
-        showToast('Error deleting tender: ' + error.message, 'error');
-    }
-}
-
-function renderTenderComments(tenderId) {
-    const container = document.getElementById('tenderCommentsList');
-    
-    if (!tenderId) {
-        container.innerHTML = '<p class="text-sm text-gray-400 italic">Save tender to add comments</p>';
-        return;
-    }
-    
-    const tender = database.tenders.find(t => t.id === tenderId);
-    
-    if (!tender || !tender.comments || tender.comments.length === 0) {
-        container.innerHTML = '<p class="text-sm text-gray-400 italic">No comments yet</p>';
-        return;
-    }
-    
-    const sortedComments = [...tender.comments].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    container.innerHTML = sortedComments.map(comment => `
-        <div class="bg-white border border-gray-200 rounded-lg p-3 text-sm">
-            <div class="flex justify-between items-start mb-1">
-                <span class="font-medium text-gray-900">${comment.author}</span>
-                <span class="text-xs text-gray-500">${formatDate(comment.date)} at ${new Date(comment.date).toLocaleTimeString('en-AU', {hour: '2-digit', minute:'2-digit'})}</span>
-            </div>
-            <p class="text-gray-700">${comment.text}</p>
-        </div>
-    `).join('');
-}
-
-async function addTenderComment() {
-    const tenderId = document.getElementById('tenderId').value;
-    const commentText = document.getElementById('newTenderComment').value.trim();
-    
-    if (!commentText) {
-        showToast('Please enter a comment', 'warning');
-        return;
-    }
-    
-    if (!tenderId) {
-        showToast('Save the tender first before adding comments', 'warning');
-        return;
-    }
-    
-    const tender = database.tenders.find(t => t.id == tenderId);
-    if (!tender) return;
-    
-    if (!tender.comments) tender.comments = [];
-    
-    const newComment = {
-        id: Date.now(),
-        text: commentText,
-        author: currentUser?.email || currentUser?.uid || 'Demo User',
-        date: new Date().toISOString()
-    };
-    
-    tender.comments.push(newComment);
-    tender.updatedAt = new Date().toISOString();
-    
-    document.getElementById('newTenderComment').value = '';
-    
-    renderTenderComments(parseInt(tenderId));
-    
-    await saveData();
-    showToast('Comment added', 'success');
-}
-
-function togglePricingFields() {
-    const status = document.getElementById('tenderStatus').value;
-    
-    document.getElementById('pricedFields').classList.add('hidden');
-    document.getElementById('notPricingFields').classList.add('hidden');
-    document.getElementById('awardedFields').classList.add('hidden');
-    document.getElementById('notWonFields').classList.add('hidden');
-    
-    if (status === 'PRICED') {
-        document.getElementById('pricedFields').classList.remove('hidden');
-    } else if (status === 'NOT_PRICING') {
-        document.getElementById('notPricingFields').classList.remove('hidden');
-    } else if (status === 'AWARDED') {
-        document.getElementById('awardedFields').classList.remove('hidden');
-    } else if (status === 'NOT_WON') {
-        document.getElementById('notWonFields').classList.remove('hidden');
-    }
-}
-
-function closeTenderModal() {
-    document.getElementById('tenderModal').classList.add('hidden');
-}
-
-async function saveTender(event) {
-    event.preventDefault();
-    
-    const id = document.getElementById('tenderId').value;
-    const status = document.getElementById('tenderStatus').value;
-    
-    const tenderData = {
-        regionId: document.getElementById('tenderRegion').value,
-        title: document.getElementById('tenderTitle').value,
-        category: document.getElementById('tenderCategory').value,
-        status: status,
-        value: document.getElementById('tenderValue').value,
-        closingDate: document.getElementById('tenderClosingDate').value,
-        description: document.getElementById('tenderDescription').value,
-        contact: {
-            name: document.getElementById('tenderContactName').value,
-            position: document.getElementById('tenderContactPosition').value,
-            email: document.getElementById('tenderContactEmail').value,
-            phone: document.getElementById('tenderContactPhone').value
-        },
-        updatedAt: new Date().toISOString()
-    };
-    
-    if (status === 'PRICED') {
-        tenderData.ourPrice = document.getElementById('ourPrice').value;
-        tenderData.submissionDate = document.getElementById('submissionDate').value;
-    } else if (status === 'NOT_PRICING') {
-        tenderData.notPricingReason = document.getElementById('notPricingReason').value;
-        tenderData.notPricingComments = document.getElementById('notPricingComments').value;
-    } else if (status === 'AWARDED') {
-        tenderData.awardedDate = document.getElementById('awardedDate').value;
-        tenderData.awardedValue = document.getElementById('awardedValue').value;
-        tenderData.awardedScope = document.getElementById('awardedScope').value;
-    } else if (status === 'NOT_WON') {
-        tenderData.winnerName = document.getElementById('winnerName').value;
-        tenderData.winnerPrice = document.getElementById('winnerPrice').value;
-        tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
-        tenderData.resultDate = document.getElementById('resultDate').value;
-        tenderData.notWonComments = document.getElementById('notWonComments').value;
-    }
-    
-    if (id) {
-        const index = database.tenders.findIndex(t => t.id == id);
-        if (index !== -1) {
-            tenderData.id = parseInt(id);
-            tenderData.createdAt = database.tenders[index].createdAt;
-            tenderData.comments = database.tenders[index].comments || [];
-            database.tenders[index] = tenderData;
-        }
-    } else {
-        tenderData.id = Date.now();
-        tenderData.createdAt = new Date().toISOString();
-        tenderData.createdBy = currentUser?.email || 'demo';
-        tenderData.comments = [];
-        database.tenders.push(tenderData);
-    }
-    
-    try {
-        await saveData();
-        closeTenderModal();
-        loadRegion(tenderData.regionId);
-        updateAllStats();
-        showToast('Tender saved successfully!', 'success');
-    } catch (error) {
-        showToast('Error saving tender: ' + error.message, 'error');
-    }
-}
-
-// ==================== CRM FUNCTIONS WITH CATEGORIES ====================
-
-function handleCategoryChange() {
-    const category = document.getElementById('crmCategory').value;
-    const regionField = document.getElementById('crmRegion');
-    const regionHelp = document.getElementById('regionHelp');
-    
-    if (category === 'Council') {
-        regionField.required = true;
-        regionHelp.textContent = 'Required for Council contacts';
-        regionHelp.classList.add('text-red-500');
-    } else {
-        regionField.required = false;
-        regionHelp.textContent = 'Optional for non-Council contacts';
-        regionHelp.classList.remove('text-red-500');
-    }
-}
-
-function renderCRMContacts() {
-    const container = document.getElementById('crmContactsList');
-    const searchQuery = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
-    const categoryFilter = document.getElementById('crmCategoryFilter')?.value || 'all';
-    const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
-    
-    let contacts = database.crmContacts || [];
-    
-    if (searchQuery) {
-        contacts = contacts.filter(c => 
-            c.name?.toLowerCase().includes(searchQuery) ||
-            c.position?.toLowerCase().includes(searchQuery) ||
-            c.department?.toLowerCase().includes(searchQuery) ||
-            c.email?.toLowerCase().includes(searchQuery)
-        );
-    }
-    
-    if (categoryFilter !== 'all') {
-        contacts = contacts.filter(c => c.category === categoryFilter);
-    }
-    
-    if (regionFilter !== 'all') {
-        contacts = contacts.filter(c => c.regionId === regionFilter);
-    }
-    
-    const categories = ['Council', 'Supplier', 'Contractor', 'Competitor'];
-    const groupedByCategory = {};
-    
-    categories.forEach(cat => {
-        groupedByCategory[cat] = contacts.filter(c => c.category === cat);
-    });
-    
-    let html = '';
-    
-    categories.forEach(category => {
-        const categoryContacts = groupedByCategory[category];
-        if (categoryContacts.length === 0) return;
-        
-        const categoryConfig = {
-            'Council': { color: 'blue', icon: 'fa-landmark', border: 'category-council' },
-            'Supplier': { color: 'green', icon: 'fa-truck', border: 'category-supplier' },
-            'Contractor': { color: 'orange', icon: 'fa-hard-hat', border: 'category-contractor' },
-            'Competitor': { color: 'red', icon: 'fa-chess', border: 'category-competitor' }
-        }[category];
-        
-        html += `
-        <div class="col-span-1 lg:col-span-2 mb-4">
-            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                <span class="w-8 h-8 rounded-full bg-${categoryConfig.color}-100 text-${categoryConfig.color}-600 flex items-center justify-center mr-2">
-                    <i class="fas ${categoryConfig.icon}"></i>
-                </span>
-                ${category}s
-                <span class="ml-2 text-sm font-normal text-gray-500">(${categoryContacts.length})</span>
-            </h3>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                ${categoryContacts.map(contact => renderContactCard(contact, categoryConfig)).join('')}
-            </div>
-        </div>
-        `;
-    });
-    
-    if (html === '') {
-        html = `
-        <div class="col-span-1 lg:col-span-2 text-center py-12 text-gray-400">
-            <i class="fas fa-users text-4xl mb-3"></i>
-            <p>No contacts found</p>
-        </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-    updateCRMStats();
-}
-
-function renderContactCard(contact, categoryConfig) {
-    const region = qldRegions.find(r => r.id === contact.regionId);
-    const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
-    
-    return `
-    <div class="crm-contact-card ${categoryConfig.border} rounded-xl p-5 shadow-sm card-hover">
-        <div class="flex justify-between items-start mb-3">
-            <div class="flex items-start space-x-3">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-${categoryConfig.color}-100 to-${categoryConfig.color}-200 flex items-center justify-center text-${categoryConfig.color}-700 font-bold text-xl flex-shrink-0">
-                    ${contact.name.charAt(0)}
-                </div>
-                <div>
-                    <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
-                    <p class="text-${categoryConfig.color}-600 font-medium text-sm">${contact.position}</p>
-                    <p class="text-sm text-gray-500">${contact.department || region?.name || 'No organization'}</p>
-                    <div class="flex gap-2 mt-1">
-                        <span class="category-badge category-${contact.category.toLowerCase()}">
-                            <i class="fas ${categoryConfig.icon} mr-1"></i> ${contact.category}
-                        </span>
-                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                            ${contact.type}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="flex space-x-1">
-                <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-${categoryConfig.color}-600 hover:bg-${categoryConfig.color}-50 rounded-lg transition-colors" title="Add Interaction">
-                    <i class="fas fa-comment-dots"></i>
-                </button>
-                <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button onclick="deleteCRMContact(${contact.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="space-y-1 text-sm mb-3">
-            <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
-            ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
-            ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
-        </div>
-
-        ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-2 text-sm text-gray-600 mb-3 italic line-clamp-2">${contact.notes}</div>` : ''}
-
-        ${interactions.length > 0 ? `
-        <div class="border-t pt-3">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-semibold text-gray-500">Last Interaction</span>
-                <span class="text-xs text-gray-400">${interactions.length} total</span>
-            </div>
-            <div class="text-xs text-gray-500">${formatDate(interactions[interactions.length-1].date)} • ${interactions[interactions.length-1].type}</div>
-            <div class="text-sm text-gray-700 line-clamp-1">${interactions[interactions.length-1].notes}</div>
-        </div>
-        ` : ''}
-
-        ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
-        <div class="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
-            <i class="fas fa-bell mr-2"></i>
-            Follow-up: ${formatDate(contact.followUpDate)}
-        </div>
-        ` : ''}
-    </div>
-    `;
-}
-
-function searchCRM() {
-    renderCRMContacts();
-}
-
-function filterCRM() {
-    renderCRMContacts();
-}
-
-function showAddCRMModal() {
-    document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
-    document.getElementById('crmContactId').value = '';
-    document.getElementById('crmForm').reset();
-    handleCategoryChange();
-    document.getElementById('crmModal').classList.remove('hidden');
-}
-
-function editCRMContact(id) {
-    const contact = database.crmContacts.find(c => c.id === id);
-    if (!contact) return;
-
-    document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
-    document.getElementById('crmContactId').value = id;
-    document.getElementById('crmCategory').value = contact.category || 'Council';
-    document.getElementById('crmRegion').value = contact.regionId || '';
-    document.getElementById('crmType').value = contact.type;
-    document.getElementById('crmName').value = contact.name;
-    document.getElementById('crmPosition').value = contact.position;
-    document.getElementById('crmDepartment').value = contact.department || '';
-    document.getElementById('crmDirectPhone').value = contact.directPhone || '';
-    document.getElementById('crmMobile').value = contact.mobile || '';
-    document.getElementById('crmEmail').value = contact.email;
-    document.getElementById('crmLinkedIn').value = contact.linkedIn || '';
-    document.getElementById('crmNotes').value = contact.notes || '';
-    document.getElementById('crmLastContactDate').value = contact.lastContactDate || '';
-    document.getElementById('crmLastContactType').value = contact.lastContactType || '';
-    document.getElementById('crmLastContactNotes').value = contact.lastContactNotes || '';
-    document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
-    document.getElementById('crmPriority').value = contact.priority || 'Medium';
-
-    handleCategoryChange();
-    document.getElementById('crmModal').classList.remove('hidden');
-}
-
-// FIXED: Delete CRM contact now properly removes from Firestore and all related data
-async function deleteCRMContact(id) {
-    const contact = database.crmContacts.find(c => c.id === id);
-    if (!contact) {
-        showToast('Contact not found', 'error');
-        return;
-    }
-
-    if (!confirm(`Are you sure you want to delete ${contact.name}?\n\nThis will also delete all associated interactions. This action cannot be undone.`)) {
-        return;
-    }
-
-    try {
-        updateSyncStatus('Deleting...');
-        
-        // 1. Delete from Firestore first (if not demo mode)
-        if (!isDemoMode && currentUser) {
-            // Delete the contact document
-            await db.collection('crmContacts').doc(String(id)).delete();
-            
-            // Delete all interactions associated with this contact
-            const interactionsSnapshot = await db.collection('interactions')
-                .where('contactId', '==', id)
-                .get();
-            
-            const batch = db.batch();
-            interactionsSnapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-        }
-        
-        // 2. Remove from local database
-        database.crmContacts = database.crmContacts.filter(c => c.id !== id);
-        
-        // 3. Remove associated interactions from local database
-        if (database.interactions) {
-            database.interactions = database.interactions.filter(i => i.contactId !== id);
-        }
-        
-        // 4. Save to localStorage for demo mode
-        if (isDemoMode) {
-            localStorage.setItem('qldCrmDemoData', JSON.stringify(database));
-        }
-        
-        // 5. Refresh UI
-        renderCRMContacts();
-        updateAllStats();
-        updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
-        showToast('Contact and associated interactions deleted successfully', 'success');
-        
-    } catch (error) {
-        console.error('Error deleting contact:', error);
-        updateSyncStatus('Error');
-        showToast('Error deleting contact: ' + error.message, 'error');
-        
-        // Reload data to ensure UI is in sync with database
-        if (!isDemoMode) {
-            await initializeDatabase();
-        }
-    }
-}
-
-function closeCRMModal() {
-    document.getElementById('crmModal').classList.add('hidden');
-}
-
-async function saveCRM(event) {
-    event.preventDefault();
-
-    const id = document.getElementById('crmContactId').value;
-    const category = document.getElementById('crmCategory').value;
-
-    if (category === 'Council' && !document.getElementById('crmRegion').value) {
-        showToast('Please select a region for Council contacts', 'error');
-        return;
-    }
-
-    const contactData = {
-        category: category,
-        regionId: document.getElementById('crmRegion').value,
-        type: document.getElementById('crmType').value,
-        name: document.getElementById('crmName').value,
-        position: document.getElementById('crmPosition').value,
-        department: document.getElementById('crmDepartment').value,
-        directPhone: document.getElementById('crmDirectPhone').value,
-        mobile: document.getElementById('crmMobile').value,
-        email: document.getElementById('crmEmail').value,
-        linkedIn: document.getElementById('crmLinkedIn').value,
-        notes: document.getElementById('crmNotes').value,
-        lastContactDate: document.getElementById('crmLastContactDate').value,
-        lastContactType: document.getElementById('crmLastContactType').value,
-        lastContactNotes: document.getElementById('crmLastContactNotes').value,
-        followUpDate: document.getElementById('crmFollowUpDate').value,
-        priority: document.getElementById('crmPriority').value,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.email || currentUser?.uid || 'demo'
-    };
-
-    if (id) {
-        const index = database.crmContacts.findIndex(c => c.id == id);
-        if (index !== -1) {
-            contactData.id = parseInt(id);
-            contactData.interactions = database.crmContacts[index].interactions || [];
-            contactData.createdAt = database.crmContacts[index].createdAt;
-            contactData.createdBy = database.crmContacts[index].createdBy;
-            database.crmContacts[index] = contactData;
-        }
-    } else {
-        contactData.id = Date.now();
-        contactData.interactions = [];
-        contactData.createdAt = new Date().toISOString();
-        contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
-        database.crmContacts.push(contactData);
-    }
-
-    try {
-        await saveData();
-        closeCRMModal();
-        renderCRMContacts();
-        updateAllStats();
-        showToast('Contact saved successfully!', 'success');
-    } catch (error) {
-        showToast('Error saving contact: ' + error.message, 'error');
-    }
-}
-
-// ==================== INTERACTION FUNCTIONS ====================
-
-function showAddInteractionModal(contactId) {
-    document.getElementById('interactionContactId').value = contactId;
-    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('interactionForm').reset();
-    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('interactionModal').classList.remove('hidden');
-}
-
-function closeInteractionModal() {
-    document.getElementById('interactionModal').classList.add('hidden');
-}
-
-async function saveInteraction(event) {
-    event.preventDefault();
-
-    const contactId = parseInt(document.getElementById('interactionContactId').value);
-
-    const interaction = {
-        id: Date.now(),
-        contactId: contactId,
-        date: document.getElementById('interactionDate').value,
-        type: document.getElementById('interactionType').value,
-        notes: document.getElementById('interactionNotes').value,
-        nextSteps: document.getElementById('interactionNextSteps').value,
-        createdAt: new Date().toISOString()
-    };
-
-    if (!database.interactions) database.interactions = [];
-    database.interactions.push(interaction);
-
-    const contact = database.crmContacts.find(c => c.id === contactId);
-    if (contact) {
-        contact.lastContactDate = interaction.date;
-        contact.lastContactType = interaction.type;
-        contact.lastContactNotes = interaction.notes;
-    }
-
-    try {
-        await saveData();
-        closeInteractionModal();
-        renderCRMContacts();
-        showToast('Interaction added!', 'success');
-    } catch (error) {
-        showToast('Error saving interaction: ' + error.message, 'error');
-    }
-}
-
-// ==================== ANALYTICS FUNCTIONS ====================
-
-function renderAnalytics() {
-    const tenders = database.tenders || [];
-
-    const priced = tenders.filter(t => t.status === 'PRICED' || t.status === 'AWARDED' || t.status === 'NOT_WON');
-    const won = tenders.filter(t => t.status === 'AWARDED');
-    const lost = tenders.filter(t => t.status === 'NOT_WON');
-    const winRate = priced.length > 0 ? ((won.length / priced.length) * 100).toFixed(1) : 0;
-
-    document.getElementById('analyticsTotalPriced').textContent = priced.length;
-    document.getElementById('analyticsWon').textContent = won.length;
-    document.getElementById('analyticsLost').textContent = lost.length;
-    document.getElementById('analyticsWinRate').textContent = winRate + '%';
-
-    const toPriceValue = sumValues(tenders.filter(t => t.status === 'TO_PRICE'));
-    const pricedValue = sumValues(tenders.filter(t => t.status === 'PRICED'));
-    const awardedValue = sumValues(tenders.filter(t => t.status === 'AWARDED'));
-    const totalPipeline = toPriceValue + pricedValue + awardedValue;
-
-    document.getElementById('analyticsToPriceValue').textContent = formatCurrency(toPriceValue);
-    document.getElementById('analyticsPricedValue').textContent = formatCurrency(pricedValue);
-    document.getElementById('analyticsAwardedValue').textContent = formatCurrency(awardedValue);
-    document.getElementById('analyticsTotalPipeline').textContent = formatCurrency(totalPipeline);
-
-    const regionStats = {};
-    tenders.forEach(t => {
-        if (!regionStats[t.regionId]) {
-            regionStats[t.regionId] = { total: 0, won: 0, value: 0 };
-        }
-        regionStats[t.regionId].total++;
-        if (t.status === 'AWARDED') {
-            regionStats[t.regionId].won++;
-            regionStats[t.regionId].value += parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0;
-        }
-    });
-
-    const sortedRegions = Object.entries(regionStats)
-        .sort((a, b) => b[1].value - a[1].value)
-        .slice(0, 10);
-
-    document.getElementById('regionPerformanceList').innerHTML = sortedRegions.map(([regionId, stats]) => {
-        const region = qldRegions.find(r => r.id === regionId);
-        const winRate = stats.total > 0 ? ((stats.won / stats.total) * 100).toFixed(0) : 0;
-        return `
-        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-full bg-[#771414] bg-opacity-10 text-[#771414] flex items-center justify-center font-bold">
-                    ${winRate}%
-                </div>
-                <div>
-                    <div class="font-semibold text-gray-900">${region?.name}</div>
-                    <div class="text-sm text-gray-500">${stats.won}/${stats.total} won</div>
-                </div>
-            </div>
-            <div class="text-right">
-                <div class="font-bold text-gray-900">${formatCurrency(stats.value)}</div>
-                <div class="text-sm text-gray-500">awarded</div>
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-// ==================== UTILITY FUNCTIONS ====================
-
-function updateAllStats() {
-    const toPrice = database.tenders.filter(t => t.status === 'TO_PRICE').length;
-    const priced = database.tenders.filter(t => t.status === 'PRICED').length;
-    const notPricing = database.tenders.filter(t => t.status === 'NOT_PRICING').length;
-    const awarded = database.tenders.filter(t => t.status === 'AWARDED').length;
-    const notWon = database.tenders.filter(t => t.status === 'NOT_WON').length;
-
-    document.getElementById('statToPrice').textContent = toPrice;
-    document.getElementById('statPriced').textContent = priced;
-    document.getElementById('statNotPricing').textContent = notPricing;
-    document.getElementById('statAwarded').textContent = awarded;
-    document.getElementById('statNotWon').textContent = notWon;
-
-    const totalAwarded = database.tenders
-        .filter(t => t.status === 'AWARDED')
-        .reduce((sum, t) => sum + (parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0), 0);
-    document.getElementById('statTotalValue').textContent = formatCurrency(totalAwarded);
-
-    updateCRMStats();
-}
-
-function updateCRMStats() {
-    const contacts = database.crmContacts || [];
-    
-    document.getElementById('crmTotalContacts').textContent = contacts.length;
-    document.getElementById('crmCouncils').textContent = contacts.filter(c => c.category === 'Council').length;
-    document.getElementById('crmSuppliers').textContent = contacts.filter(c => c.category === 'Supplier').length;
-    document.getElementById('crmContractors').textContent = contacts.filter(c => c.category === 'Contractor').length;
-    document.getElementById('crmCompetitors').textContent = contacts.filter(c => c.category === 'Competitor').length;
-}
-
-function updateSyncStatus(status) {
-    const indicator = document.getElementById('syncStatus');
-    if (status === 'Synced' || status === 'Demo Mode') {
-        indicator.innerHTML = `<i class="fas ${isDemoMode ? 'fa-flask' : 'fa-check-circle'} mr-1"></i> ${status}`;
-        indicator.className = isDemoMode ? 'flex items-center text-amber-600' : 'flex items-center text-green-600';
-    } else if (status === 'Offline') {
-        indicator.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
-        indicator.className = 'flex items-center text-orange-600';
-    } else {
-        indicator.innerHTML = '<i class="fas fa-sync-alt mr-1 fa-spin"></i> ' + status;
-        indicator.className = 'flex items-center text-blue-600';
-    }
-}
-
-function globalSearch() {
-    const query = document.getElementById('globalSearch').value.toLowerCase();
-    if (!query) {
-        if (currentMainTab === 'tenders') loadRegion(currentRegion);
-        else if (currentMainTab === 'crm') renderCRMContacts();
-        return;
-    }
-
-    const filteredTenders = database.tenders.filter(t => 
-        t.title.toLowerCase().includes(query) || 
-        t.category.toLowerCase().includes(query) ||
-        t.contact?.name.toLowerCase().includes(query)
-    );
-
-    if (currentMainTab === 'tenders') {
-        document.getElementById('regionContent').innerHTML = `
-            <div class="glass-panel rounded-2xl p-6 mb-6">
-                <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
-                <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders</p>
-                <button onclick="loadRegion('${currentRegion}')" class="text-[#771414] hover:underline mb-4">
-                    <i class="fas fa-arrow-left mr-1"></i> Back to region view
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                ${filteredTenders.map(tender => {
-                    const region = qldRegions.find(r => r.id === tender.regionId);
-                    return `
-                    <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editTender(${tender.id}), 100)">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs font-semibold px-2 py-1 rounded bg-[#771414] bg-opacity-10 text-[#771414]">${region?.name}</span>
-                            <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.status}</span>
-                        </div>
-                        <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
-                        <div class="text-sm text-gray-600">${tender.value}</div>
-                    </div>`;
-                }).join('')}
-            </div>
-        `;
-    }
-}
-
-function exportToExcel() {
-    let csv = 'Type,Region,Title,Category,Status,Value,Closing Date,Contact Name,Contact Email,Contact Phone,Description\n';
-
-    database.tenders.forEach(t => {
-        const region = qldRegions.find(r => r.id === t.regionId);
-        csv += `Tender,${region?.name},"${t.title}","${t.category}","${t.status}","${t.value}","${t.closingDate}","${t.contact?.name}","${t.contact?.email}","${t.contact?.phone}","${t.description}"\n`;
-    });
-
-    if (database.crmContacts) {
-        database.crmContacts.forEach(c => {
-            const region = qldRegions.find(r => r.id === c.regionId);
-            csv += `Contact,${region?.name},"${c.name}","${c.category}","${c.position}","${c.department}","${c.email}","${c.directPhone}","${c.mobile}","${c.notes}"\n`;
-        });
-    }
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `QLD_Business_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-
-    showToast('Report exported successfully!', 'success');
-}
-
-function shareReport() {
-    const shareData = {
-        title: 'QLD Business Development & CRM Report',
-        text: `Managing ${database.tenders.length} tenders and ${database.crmContacts?.length || 0} contacts across 77 Queensland LGAs`,
-        url: window.location.href
-    };
-
-    if (navigator.share) {
-        navigator.share(shareData);
-    } else {
-        navigator.clipboard.writeText(window.location.href);
-        showToast('Link copied to clipboard!', 'success');
-    }
-}
-
-function quickAdd() {
-    if (currentMainTab === 'tenders') {
-        showAddTenderModal();
-    } else if (currentMainTab === 'crm') {
-        showAddCRMModal();
-    }
-}
-
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-
-    const colors = {
-        success: 'bg-green-500',
-        error: 'bg-red-500',
-        info: 'bg-blue-500',
-        warning: 'bg-amber-500'
-    };
-
-    toast.className = `toast ${colors[type] || colors.info} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
-    `;
-
-    container.appendChild(toast);
-
-    setTimeout(() => toast.classList.add('show'), 100);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// ==================== ADMIN FUNCTIONS ====================
-
-// FIXED: Admin panel functions with proper error handling
-async function showAdminPanel() {
-    console.log("Admin panel requested");
-    
-    try {
-        const isAdmin = await checkIfAdmin();
-        console.log("Is admin:", isAdmin);
-        
-        if (!isAdmin) {
-            showToast('Access denied. Admin only.', 'error');
-            return;
-        }
-
-        document.getElementById('adminPanel').classList.remove('hidden');
-        await loadPendingApprovals();
-        await loadApprovedUsers();
-        
-    } catch (error) {
-        console.error("Error opening admin panel:", error);
-        showToast('Error opening admin panel: ' + error.message, 'error');
-    }
-}
-
-function closeAdminPanel() {
-    document.getElementById('adminPanel').classList.add('hidden');
-}
-
-async function loadPendingApprovals() {
-    try {
-        const snapshot = await db.collection('approvalRequests')
-            .where('status', '==', 'pending')
-            .orderBy('requestedAt', 'desc')
-            .get();
-
-        const container = document.getElementById('pendingApprovalsList');
-
-        if (snapshot.empty) {
-            container.innerHTML = `
-                <div class="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                    <i class="fas fa-check-circle text-3xl mb-2 text-green-500"></i>
-                    <p>No pending approval requests</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = new Date(data.requestedAt).toLocaleDateString('en-AU');
-            return `
-            <div class="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                    <div class="font-semibold text-gray-900">${data.email}</div>
-                    <div class="text-sm text-gray-500">Requested: ${date}</div>
-                    <div class="text-xs text-gray-400 mt-1">UID: ${data.uid}</div>
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="approveUser('${data.uid}', '${data.email}')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
-                        <i class="fas fa-check mr-1"></i> Approve
-                    </button>
-                    <button onclick="rejectUser('${data.uid}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
-                        <i class="fas fa-times mr-1"></i> Reject
-                    </button>
-                </div>
-            </div>
-            `;
-        }).join('');
-
-    } catch (err) {
-        console.error("Error loading approvals:", err);
-        document.getElementById('pendingApprovalsList').innerHTML = `
-            <div class="text-center py-8 text-red-500">
-                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                <p>Error loading requests. Check permissions.</p>
-                <p class="text-xs mt-2">${err.message}</p>
-            </div>
-        `;
-    }
-}
-
-async function loadApprovedUsers() {
-    try {
-        const snapshot = await db.collection('approvedUsers')
-            .where('approved', '==', true)
-            .orderBy('approvedAt', 'desc')
-            .get();
-
-        const container = document.getElementById('approvedUsersList');
-
-        if (snapshot.empty) {
-            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
-            return;
-        }
-
-        container.innerHTML = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
-            return `
-            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <div>
-                    <div class="font-medium text-gray-900">${data.email}</div>
-                    <div class="text-xs text-green-700">Approved: ${date}</div>
-                </div>
-                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
-                    <i class="fas fa-user-times"></i> Revoke
-                </button>
-            </div>
-            `;
-        }).join('');
-
-    } catch (err) {
-        console.error("Error loading approved users:", err);
-        document.getElementById('approvedUsersList').innerHTML = `
-            <p class="text-red-400 text-center py-4">Error loading users: ${err.message}</p>
-        `;
-    }
-}
-
-async function approveUser(uid, email) {
-    try {
-        await db.collection('approvedUsers').doc(uid).set({
-            email: email,
-            approved: true,
-            approvedAt: new Date().toISOString(),
-            approvedBy: currentUser.email
-        });
-
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'approved',
-            approvedAt: new Date().toISOString()
-        });
-
-        showToast(`Approved ${email}`, 'success');
-        await loadPendingApprovals();
-        await loadApprovedUsers();
-
-    } catch (err) {
-        showToast('Error approving user: ' + err.message, 'error');
-    }
-}
-
-async function rejectUser(uid) {
-    if (!confirm('Are you sure you want to reject this user? They will not be able to access the system.')) {
-        return;
-    }
-
-    try {
-        await db.collection('approvalRequests').doc(uid).update({
-            status: 'rejected',
-            rejectedAt: new Date().toISOString()
-        });
-
-        showToast('User rejected', 'info');
-        await loadPendingApprovals();
-
-    } catch (err) {
-        showToast('Error rejecting user: ' + err.message, 'error');
-    }
-}
-
-async function revokeAccess(uid) {
-    if (!confirm('Are you sure you want to revoke this user\'s access?')) {
-        return;
-    }
-
-    try {
-        await db.collection('approvedUsers').doc(uid).update({
-            approved: false,
-            revokedAt: new Date().toISOString(),
-            revokedBy: currentUser.email
-        });
-
-        showToast('Access revoked', 'success');
-        await loadApprovedUsers();
-
-    } catch (err) {
-        showToast('Error revoking access: ' + err.message, 'error');
-    }
-}
-
-// ==================== INITIALIZATION ====================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Close modals on outside click
-    window.onclick = function(event) {
-        const modals = ['tenderModal', 'crmModal', 'interactionModal', 'adminPanel'];
-        modals.forEach(modalId => {
-            const modal = document.getElementById(modalId);
-            if (event.target === modal) {
-                modal.classList.add('hidden');
-            }
-        });
-    };
-});
-
+            ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> ${formatDate(tender
 </script>
 </body>
 </html>
+
 
 
 
