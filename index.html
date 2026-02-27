@@ -357,6 +357,7 @@
             color: white;
         }
     </style>
+<base target="_blank">
 </head>
 <body class="text-gray-800 min-h-screen">
 
@@ -1203,11 +1204,2228 @@
     </div>
 
 <script>
+// ==================== GLOBAL VARIABLES ====================
+let currentUser = null;
+let isDemoMode = false;
+let currentRegion = null;
+let currentMainTab = 'tenders';
+let currentState = 'QLD';
+let database = {
+    tenders: [],
+    crmContacts: [],
+    interactions: []
+};
+
+// Firebase Config
+const firebaseConfig = {
+    apiKey: "AIzaSyACeeQF5c4sKwQxM4LaW4pzlPd7R5HuRSg",
+    authDomain: "queensland-business-reporting.firebaseapp.com",
+    projectId: "queensland-business-reporting",
+    storageBucket: "queensland-business-reporting.firebasestorage.app",
+    messagingSenderId: "271437640355",
+    appId: "1:271437640355:web:d11f19e2b61c30d5bd8516",
+    measurementId: "G-XE0LCMYLC5"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Set auth persistence
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .catch((error) => {
+        console.error("Auth persistence error:", error);
+    });
+
+// Auth state listener
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Auth state: User signed in", user.email);
+        currentUser = user;
+        document.getElementById('userEmail').textContent = user.email;
+        checkUserApproval(user);
+    } else {
+        console.log("Auth state: No user signed in");
+        currentUser = null;
+        document.getElementById('authModal').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('stateSelectorModal').classList.add('hidden');
+    }
+});
+
+// ==================== AUSTRALIAN STATES DATA ====================
+const australianStates = {
+    QLD: {
+        name: 'Queensland',
+        code: 'QLD',
+        color: '#771414',
+        population: 5419000,
+        lgaCount: 77,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'SEQ', name: 'South East QLD' },
+            { id: 'NQ', name: 'North QLD' },
+            { id: 'CQ', name: 'Central QLD' },
+            { id: 'SWQ', name: 'South West QLD' },
+            { id: 'FNQ', name: 'Far North QLD' },
+            { id: 'GULF', name: 'Gulf Country' }
+        ],
+        regions: [
+            { id: 'SEQ-BCC', name: 'Brisbane City Council', zone: 'SEQ', population: 1265000 },
+            { id: 'SEQ-GC', name: 'Gold Coast City', zone: 'SEQ', population: 607000 },
+            { id: 'SEQ-ISC', name: 'Ipswich City', zone: 'SEQ', population: 229000 },
+            { id: 'SEQ-LCC', name: 'Logan City', zone: 'SEQ', population: 345000 },
+            { id: 'SEQ-MRCC', name: 'Moreton Bay Regional', zone: 'SEQ', population: 487000 },
+            { id: 'SEQ-RCC', name: 'Redland City', zone: 'SEQ', population: 165000 },
+            { id: 'SEQ-SCRC', name: 'Sunshine Coast Regional', zone: 'SEQ', population: 355000 },
+            { id: 'SEQ-TRC', name: 'Toowoomba Regional', zone: 'SEQ', population: 173000 },
+            { id: 'SEQ-LS', name: 'Lockyer Valley Regional', zone: 'SEQ', population: 42000 },
+            { id: 'SEQ-SC', name: 'Scenic Rim Regional', zone: 'SEQ', population: 43000 },
+            { id: 'SEQ-SB', name: 'Somerset Regional', zone: 'SEQ', population: 26000 },
+            { id: 'SEQ-SRC', name: 'Southern Downs Regional', zone: 'SEQ', population: 37000 },
+            { id: 'SEQ-WRC', name: 'Western Downs Regional', zone: 'SEQ', population: 35000 },
+            { id: 'SEQ-GRC', name: 'Goondiwindi Regional', zone: 'SEQ', population: 11000 },
+            { id: 'SEQ-SBRC', name: 'South Burnett Regional', zone: 'SEQ', population: 33000 },
+            { id: 'SEQ-NBRC', name: 'North Burnett Regional', zone: 'SEQ', population: 11000 },
+            { id: 'SEQ-CRC', name: 'Cherbourg Aboriginal Shire', zone: 'SEQ', population: 1400 },
+            { id: 'NQ-TC', name: 'Townsville City', zone: 'NQ', population: 197000 },
+            { id: 'NQ-CC', name: 'Cairns Regional', zone: 'NQ', population: 168000 },
+            { id: 'NQ-MRC', name: 'Mackay Regional', zone: 'NQ', population: 118000 },
+            { id: 'NQ-RRC', name: 'Rockhampton Regional', zone: 'NQ', population: 82000 },
+            { id: 'NQ-WRC', name: 'Whitsunday Regional', zone: 'NQ', population: 56000 },
+            { id: 'NQ-BS', name: 'Burdekin Shire', zone: 'NQ', population: 17000 },
+            { id: 'NQ-HS', name: 'Hinchinbrook Shire', zone: 'NQ', population: 11000 },
+            { id: 'NQ-ICC', name: 'Isaac Regional', zone: 'NQ', population: 22000 },
+            { id: 'NQ-BC', name: 'Bowen Shire', zone: 'NQ', population: 11000 },
+            { id: 'NQ-CH', name: 'Central Highlands Regional', zone: 'NQ', population: 12000 },
+            { id: 'NQ-WC', name: 'Winton Shire', zone: 'NQ', population: 1400 },
+            { id: 'NQ-FC', name: 'Flinders Shire', zone: 'NQ', population: 1300 },
+            { id: 'NQ-RM', name: 'Richmond Shire', zone: 'NQ', population: 800 },
+            { id: 'NQ-MC', name: 'McKinlay Shire', zone: 'NQ', population: 900 },
+            { id: 'NQ-CAR', name: 'Carpentaria Shire', zone: 'NQ', population: 2000 },
+            { id: 'NQ-CRO', name: 'Croydon Shire', zone: 'NQ', population: 280 },
+            { id: 'CQ-BRC', name: 'Bundaberg Regional', zone: 'CQ', population: 96000 },
+            { id: 'CQ-GRC', name: 'Gladstone Regional', zone: 'CQ', population: 64000 },
+            { id: 'CQ-GV', name: 'Gympie Regional', zone: 'CQ', population: 52000 },
+            { id: 'CQ-FCRC', name: 'Fraser Coast Regional', zone: 'CQ', population: 110000 },
+            { id: 'CQ-BAN', name: 'Banana Shire', zone: 'CQ', population: 14000 },
+            { id: 'SWQ-WRC', name: 'Western Downs Regional', zone: 'SWQ', population: 35000 },
+            { id: 'SWQ-MC', name: 'Maranoa Regional', zone: 'SWQ', population: 13000 },
+            { id: 'SWQ-BS', name: 'Balonne Shire', zone: 'SWQ', population: 4300 },
+            { id: 'SWQ-BM', name: 'Bulloo Shire', zone: 'SWQ', population: 330 },
+            { id: 'SWQ-MU', name: 'Murweh Shire', zone: 'SWQ', population: 4100 },
+            { id: 'SWQ-PA', name: 'Paroo Shire', zone: 'SWQ', population: 1700 },
+            { id: 'SWQ-QU', name: 'Quilpie Shire', zone: 'SWQ', population: 800 },
+            { id: 'SWQ-BA', name: 'Barcoo Shire', zone: 'SWQ', population: 260 },
+            { id: 'SWQ-BO', name: 'Boulia Shire', zone: 'SWQ', population: 440 },
+            { id: 'SWQ-DI', name: 'Diamantina Shire', zone: 'SWQ', population: 280 },
+            { id: 'FNQ-TC', name: 'Tablelands Regional', zone: 'FNQ', population: 27000 },
+            { id: 'FNQ-MC', name: 'Mareeba Shire', zone: 'FNQ', population: 23000 },
+            { id: 'FNQ-DT', name: 'Douglas Shire', zone: 'FNQ', population: 12000 },
+            { id: 'FNQ-CC', name: 'Cassowary Coast Regional', zone: 'FNQ', population: 28000 },
+            { id: 'FNQ-AP', name: 'Aurukun Shire', zone: 'FNQ', population: 1200 },
+            { id: 'FNQ-CK', name: 'Cook Shire', zone: 'FNQ', population: 4400 },
+            { id: 'FNQ-EA', name: 'Etheridge Shire', zone: 'FNQ', population: 800 },
+            { id: 'FNQ-HP', name: 'Hope Vale Aboriginal Shire', zone: 'FNQ', population: 1000 },
+            { id: 'FNQ-KO', name: 'Kowanyama Aboriginal Shire', zone: 'FNQ', population: 1100 },
+            { id: 'FNQ-LP', name: 'Lockhart River Aboriginal Shire', zone: 'FNQ', population: 700 },
+            { id: 'FNQ-MP', name: 'Mapoon Aboriginal Shire', zone: 'FNQ', population: 300 },
+            { id: 'FNQ-NP', name: 'Napranum Aboriginal Shire', zone: 'FNQ', population: 1000 },
+            { id: 'FNQ-NL', name: 'Northern Peninsula Area Regional', zone: 'FNQ', population: 3000 },
+            { id: 'FNQ-PO', name: 'Pormpuraaw Aboriginal Shire', zone: 'FNQ', population: 700 },
+            { id: 'FNQ-TH', name: 'Torres Shire', zone: 'FNQ', population: 4300 },
+            { id: 'FNQ-TI', name: 'Torres Strait Island Regional', zone: 'FNQ', population: 4700 },
+            { id: 'FNQ-WC', name: 'Wujal Wujal Aboriginal Shire', zone: 'FNQ', population: 300 },
+            { id: 'FNQ-YA', name: 'Yarrabah Aboriginal Shire', zone: 'FNQ', population: 2600 },
+            { id: 'GULF-BS', name: 'Burke Shire', zone: 'GULF', population: 400 },
+            { id: 'GULF-DO', name: 'Doomadgee Aboriginal Shire', zone: 'GULF', population: 1400 },
+            { id: 'GULF-GC', name: 'Gregory Shire', zone: 'GULF', population: 300 }
+        ]
+    },
+    NSW: {
+        name: 'New South Wales',
+        code: 'NSW',
+        color: '#00247D',
+        population: 8189000,
+        lgaCount: 128,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'SYD', name: 'Sydney Metro' },
+            { id: 'NC', name: 'North Coast' },
+            { id: 'NW', name: 'North West' },
+            { id: 'CWT', name: 'Central West & Tablelands' },
+            { id: 'SC', name: 'South Coast' },
+            { id: 'RIV', name: 'Riverina' },
+            { id: 'FAR', name: 'Far West' }
+        ],
+        regions: [
+            { id: 'SYD-BCC', name: 'Blacktown City', zone: 'SYD', population: 396000 },
+            { id: 'SYD-BRC', name: 'Blue Mountains City', zone: 'SYD', population: 78000 },
+            { id: 'SYD-BUC', name: 'Burwood Council', zone: 'SYD', population: 40000 },
+            { id: 'SYD-CAM', name: 'Camden Council', zone: 'SYD', population: 119000 },
+            { id: 'SYD-CAN', name: 'Campbelltown City', zone: 'SYD', population: 166000 },
+            { id: 'SYD-CANB', name: 'Canada Bay City', zone: 'SYD', population: 91000 },
+            { id: 'SYD-CANT', name: 'Canterbury-Bankstown', zone: 'SYD', population: 371000 },
+            { id: 'SYD-CC', name: 'Central Coast Council', zone: 'SYD', population: 346000 },
+            { id: 'SYD-CUMB', name: 'Cumberland City', zone: 'SYD', population: 258000 },
+            { id: 'SYD-FA', name: 'Fairfield City', zone: 'SYD', population: 208000 },
+            { id: 'SYD-GEO', name: 'Georges River Council', zone: 'SYD', population: 151000 },
+            { id: 'SYD-HOR', name: 'Hornsby Shire', zone: 'SYD', population: 151000 },
+            { id: 'SYD-INN', name: 'Inner West Council', zone: 'SYD', population: 188000 },
+            { id: 'SYD-KU', name: 'Ku-ring-gai Council', zone: 'SYD', population: 125000 },
+            { id: 'SYD-LAN', name: 'Lane Cove Council', zone: 'SYD', population: 38000 },
+            { id: 'SYD-LIV', name: 'Liverpool City', zone: 'SYD', population: 233000 },
+            { id: 'SYD-MOS', name: 'Mosman Council', zone: 'SYD', population: 30000 },
+            { id: 'SYD-NBC', name: 'Northern Beaches Council', zone: 'SYD', population: 269000 },
+            { id: 'SYD-NTH', name: 'North Sydney Council', zone: 'SYD', population: 69000 },
+            { id: 'SYD-PAR', name: 'Parramatta City', zone: 'SYD', population: 258000 },
+            { id: 'SYD-PEN', name: 'Penrith City', zone: 'SYD', population: 217000 },
+            { id: 'SYD-RAN', name: 'Randwick City', zone: 'SYD', population: 147000 },
+            { id: 'SYD-RYD', name: 'Ryde City', zone: 'SYD', population: 129000 },
+            { id: 'SYD-STR', name: 'Strathfield Council', zone: 'SYD', population: 45000 },
+            { id: 'SYD-SUT', name: 'Sutherland Shire', zone: 'SYD', population: 230000 },
+            { id: 'SYD-SYD', name: 'Sydney City', zone: 'SYD', population: 246000 },
+            { id: 'SYD-WOL', name: 'Wollongong City', zone: 'SYD', population: 215000 },
+            { id: 'SYD-WOO', name: 'Woollahra Council', zone: 'SYD', population: 58000 },
+            { id: 'NC-BEL', name: 'Bellingen Shire', zone: 'NC', population: 13000 },
+            { id: 'NC-BYR', name: 'Byron Shire', zone: 'NC', population: 37000 },
+            { id: 'NC-CLA', name: 'Clarence Valley', zone: 'NC', population: 52000 },
+            { id: 'NC-COF', name: 'Coffs Harbour City', zone: 'NC', population: 78000 },
+            { id: 'NC-KYM', name: 'Kempsey Shire', zone: 'NC', population: 31000 },
+            { id: 'NC-LIS', name: 'Lismore City', zone: 'NC', population: 44000 },
+            { id: 'NC-NAM', name: 'Nambucca Valley', zone: 'NC', population: 20000 },
+            { id: 'NC-PORT', name: 'Port Macquarie-Hastings', zone: 'NC', population: 86000 },
+            { id: 'NC-RIC', name: 'Richmond Valley', zone: 'NC', population: 23000 },
+            { id: 'NC-TWE', name: 'Tweed Shire', zone: 'NC', population: 97000 },
+            { id: 'NW-ARM', name: 'Armidale Regional', zone: 'NW', population: 31000 },
+            { id: 'NW-GUN', name: 'Gunnedah Shire', zone: 'NW', population: 13000 },
+            { id: 'NW-GWY', name: 'Gwydir Shire', zone: 'NW', population: 5000 },
+            { id: 'NW-INV', name: 'Inverell Shire', zone: 'NW', population: 17000 },
+            { id: 'NW-LIV', name: 'Liverpool Plains Shire', zone: 'NW', population: 7600 },
+            { id: 'NW-MOR', name: 'Moree Plains Shire', zone: 'NW', population: 13000 },
+            { id: 'NW-NAR', name: 'Narrabri Shire', zone: 'NW', population: 13000 },
+            { id: 'NW-TAM', name: 'Tamworth Regional', zone: 'NW', population: 63000 },
+            { id: 'NW-TEN', name: 'Tenterfield Shire', zone: 'NW', population: 6800 },
+            { id: 'NW-URU', name: 'Uralla Shire', zone: 'NW', population: 6200 },
+            { id: 'NW-WAL', name: 'Walcha Shire', zone: 'NW', population: 3100 }
+        ]
+    },
+    VIC: {
+        name: 'Victoria',
+        code: 'VIC',
+        color: '#000080',
+        population: 6681000,
+        lgaCount: 79,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'MEL', name: 'Melbourne Metro' },
+            { id: 'BAR', name: 'Barwon South West' },
+            { id: 'GIP', name: 'Gippsland' },
+            { id: 'GOL', name: 'Grampians' },
+            { id: 'HUM', name: 'Hume' },
+            { id: 'LOD', name: 'Loddon Mallee' }
+        ],
+        regions: [
+            { id: 'MEL-BAN', name: 'Banyule City', zone: 'MEL', population: 131000 },
+            { id: 'MEL-BAS', name: 'Bayside City', zone: 'MEL', population: 107000 },
+            { id: 'MEL-BOR', name: 'Boroondara City', zone: 'MEL', population: 181000 },
+            { id: 'MEL-BRA', name: 'Brimbank City', zone: 'MEL', population: 215000 },
+            { id: 'MEL-CAR', name: 'Cardinia Shire', zone: 'MEL', population: 118000 },
+            { id: 'MEL-CAS', name: 'Casey City', zone: 'MEL', population: 365000 },
+            { id: 'MEL-DAR', name: 'Darebin City', zone: 'MEL', population: 161000 },
+            { id: 'MEL-FRA', name: 'Frankston City', zone: 'MEL', population: 142000 },
+            { id: 'MEL-GLEN', name: 'Glen Eira City', zone: 'MEL', population: 153000 },
+            { id: 'MEL-GRE', name: 'Greater Dandenong City', zone: 'MEL', population: 169000 },
+            { id: 'MEL-HOB', name: 'Hobsons Bay City', zone: 'MEL', population: 97000 },
+            { id: 'MEL-HUM', name: 'Hume City', zone: 'MEL', population: 243000 },
+            { id: 'MEL-KIN', name: 'Kingston City', zone: 'MEL', population: 166000 },
+            { id: 'MEL-KNO', name: 'Knox City', zone: 'MEL', population: 162000 },
+            { id: 'MEL-MAN', name: 'Manningham City', zone: 'MEL', population: 125000 },
+            { id: 'MEL-MAR', name: 'Maroondah City', zone: 'MEL', population: 118000 },
+            { id: 'MEL-MEL', name: 'Melbourne City', zone: 'MEL', population: 184000 },
+            { id: 'MEL-MELB', name: 'Melton City', zone: 'MEL', population: 180000 },
+            { id: 'MEL-MON', name: 'Monash City', zone: 'MEL', population: 202000 },
+            { id: 'MEL-MOO', name: 'Moonee Valley City', zone: 'MEL', population: 131000 },
+            { id: 'MEL-MOR', name: 'Moreland City', zone: 'MEL', population: 185000 },
+            { id: 'MEL-NIL', name: 'Nillumbik Shire', zone: 'MEL', population: 65000 },
+            { id: 'MEL-POR', name: 'Port Phillip City', zone: 'MEL', population: 113000 },
+            { id: 'MEL-STA', name: 'Stonnington City', zone: 'MEL', population: 116000 },
+            { id: 'MEL-WHI', name: 'Whitehorse City', zone: 'MEL', population: 176000 },
+            { id: 'MEL-WHY', name: 'Whittlesea City', zone: 'MEL', population: 230000 },
+            { id: 'MEL-WIL', name: 'Wyndham City', zone: 'MEL', population: 294000 },
+            { id: 'MEL-YAR', name: 'Yarra City', zone: 'MEL', population: 98000 },
+            { id: 'MEL-YARR', name: 'Yarra Ranges Shire', zone: 'MEL', population: 158000 },
+            { id: 'BAR-COL', name: 'Colac Otway Shire', zone: 'BAR', population: 22000 },
+            { id: 'BAR-COR', name: 'Corangamite Shire', zone: 'BAR', population: 16000 },
+            { id: 'BAR-GRE', name: 'Greater Geelong City', zone: 'BAR', population: 271000 },
+            { id: 'BAR-QUE', name: 'Queenscliffe Borough', zone: 'BAR', population: 3000 },
+            { id: 'BAR-SUR', name: 'Surf Coast Shire', zone: 'BAR', population: 37000 },
+            { id: 'GIP-BAS', name: 'Bass Coast Shire', zone: 'GIP', population: 40000 },
+            { id: 'GIP-BO', name: 'Baw Baw Shire', zone: 'GIP', population: 57000 },
+            { id: 'GIP-EAS', name: 'East Gippsland Shire', zone: 'GIP', population: 48000 },
+            { id: 'GIP-LAT', name: 'Latrobe City', zone: 'GIP', population: 78000 },
+            { id: 'GIP-SOU', name: 'South Gippsland Shire', zone: 'GIP', population: 30000 },
+            { id: 'GIP-WEL', name: 'Wellington Shire', zone: 'GIP', population: 45000 },
+            { id: 'GOL-ARA', name: 'Ararat Rural City', zone: 'GOL', population: 12000 },
+            { id: 'GOL-BAL', name: 'Ballarat City', zone: 'GOL', population: 116000 },
+            { id: 'GOL-GOL', name: 'Golden Plains Shire', zone: 'GOL', population: 25000 },
+            { id: 'GOL-HEP', name: 'Hepburn Shire', zone: 'GOL', population: 16000 },
+            { id: 'GOL-HIN', name: 'Hindmarsh Shire', zone: 'GOL', population: 5700 },
+            { id: 'GOL-HOR', name: 'Horsham Rural City', zone: 'GOL', population: 20000 },
+            { id: 'GOL-MOO', name: 'Moorabool Shire', zone: 'GOL', population: 37000 },
+            { id: 'GOL-MOY', name: 'Moyne Shire', zone: 'GOL', population: 17000 },
+            { id: 'GOL-NOR', name: 'Northern Grampians Shire', zone: 'GOL', population: 11500 },
+            { id: 'GOL-PYR', name: 'Pyrenees Shire', zone: 'GOL', population: 7500 },
+            { id: 'GOL-WAR', name: 'Warrnambool City', zone: 'GOL', population: 36000 },
+            { id: 'GOL-WES', name: 'West Wimmera Shire', zone: 'GOL', population: 3900 },
+            { id: 'GOL-YAR', name: 'Yarriambiack Shire', zone: 'GOL', population: 6400 },
+            { id: 'HUM-ALP', name: 'Alpine Shire', zone: 'HUM', population: 13000 },
+            { id: 'HUM-BEN', name: 'Benalla Rural City', zone: 'HUM', population: 14500 },
+            { id: 'HUM-IND', name: 'Indigo Shire', zone: 'HUM', population: 17000 },
+            { id: 'HUM-MAN', name: 'Mansfield Shire', zone: 'HUM', population: 10000 },
+            { id: 'HUM-MIT', name: 'Mitchell Shire', zone: 'HUM', population: 52000 },
+            { id: 'HUM-MOO', name: 'Moira Shire', zone: 'HUM', population: 30000 },
+            { id: 'HUM-STR', name: 'Strathbogie Shire', zone: 'HUM', population: 11000 },
+            { id: 'HUM-TOW', name: 'Towong Shire', zone: 'HUM', population: 6000 },
+            { id: 'HUM-WAN', name: 'Wangaratta Rural City', zone: 'HUM', population: 29000 },
+            { id: 'HUM-WOD', name: 'Wodonga City', zone: 'HUM', population: 43000 },
+            { id: 'LOD-BUL', name: 'Buloke Shire', zone: 'LOD', population: 6100 },
+            { id: 'LOD-CAM', name: 'Campaspe Shire', zone: 'LOD', population: 38000 },
+            { id: 'LOD-CEN', name: 'Central Goldfields Shire', zone: 'LOD', population: 13500 },
+            { id: 'LOD-GAN', name: 'Gannawarra Shire', zone: 'LOD', population: 10500 },
+            { id: 'LOD-LOD', name: 'Loddon Shire', zone: 'LOD', population: 8000 },
+            { id: 'LOD-MAC', name: 'Macedon Ranges Shire', zone: 'LOD', population: 51000 },
+            { id: 'LOD-MID', name: 'Mildura Rural City', zone: 'LOD', population: 57000 },
+            { id: 'LOD-MOU', name: 'Mount Alexander Shire', zone: 'LOD', population: 20000 },
+            { id: 'LOD-SWA', name: 'Swan Hill Rural City', zone: 'LOD', population: 21000 }
+        ]
+    },
+    SA: {
+        name: 'South Australia',
+        code: 'SA',
+        color: '#D40000',
+        population: 1827000,
+        lgaCount: 68,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'ADE', name: 'Adelaide Metro' },
+            { id: 'BAR', name: 'Barossa' },
+            { id: 'EYRE', name: 'Eyre & Western' },
+            { id: 'FAR', name: 'Far North' },
+            { id: 'LIM', name: 'Limestone Coast' },
+            { id: 'YOR', name: 'Yorke & Mid North' }
+        ],
+        regions: [
+            { id: 'ADE-ADE', name: 'Adelaide City', zone: 'ADE', population: 25000 },
+            { id: 'ADE-BUR', name: 'Burnside City', zone: 'ADE', population: 47000 },
+            { id: 'ADE-CAM', name: 'Campbelltown City', zone: 'ADE', population: 51000 },
+            { id: 'ADE-CHA', name: 'Charles Sturt City', zone: 'ADE', population: 115000 },
+            { id: 'ADE-HOL', name: 'Holdfast Bay City', zone: 'ADE', population: 39000 },
+            { id: 'ADE-MAR', name: 'Marion City', zone: 'ADE', population: 93000 },
+            { id: 'ADE-MIT', name: 'Mitcham City', zone: 'ADE', population: 68000 },
+            { id: 'ADE-NOR', name: 'Norwood Payneham & St Peters City', zone: 'ADE', population: 37000 },
+            { id: 'ADE-ONK', name: 'Onkaparinga City', zone: 'ADE', population: 177000 },
+            { id: 'ADE-PLA', name: 'Playford City', zone: 'ADE', population: 95000 },
+            { id: 'ADE-PORT', name: 'Port Adelaide Enfield City', zone: 'ADE', population: 128000 },
+            { id: 'ADE-PRO', name: 'Prospect City', zone: 'ADE', population: 22000 },
+            { id: 'ADE-SAL', name: 'Salisbury City', zone: 'ADE', population: 145000 },
+            { id: 'ADE-TEA', name: 'Tea Tree Gully City', zone: 'ADE', population: 102000 },
+            { id: 'ADE-UNL', name: 'Unley City', zone: 'ADE', population: 41000 },
+            { id: 'ADE-WAL', name: 'Walkerville Municipal', zone: 'ADE', population: 8000 },
+            { id: 'ADE-WES', name: 'West Torrens City', zone: 'ADE', population: 62000 },
+            { id: 'BAR-BAR', name: 'Barossa Council', zone: 'BAR', population: 25000 },
+            { id: 'BAR-LIG', name: 'Light Regional', zone: 'BAR', population: 17000 },
+            { id: 'EYRE-CED', name: 'Ceduna District Council', zone: 'EYRE', population: 3800 },
+            { id: 'EYRE-CLE', name: 'Cleve District Council', zone: 'EYRE', population: 1700 },
+            { id: 'EYRE-ELL', name: 'Elliston District Council', zone: 'EYRE', population: 1100 },
+            { id: 'EYRE-FLA', name: 'Flinders Ranges Council', zone: 'EYRE', population: 1700 },
+            { id: 'EYRE-FRA', name: 'Franklin Harbour District Council', zone: 'EYRE', population: 1300 },
+            { id: 'EYRE-KIM', name: 'Kimba District Council', zone: 'EYRE', population: 1100 },
+            { id: 'EYRE-LEI', name: 'Le Hunte District Council', zone: 'EYRE', population: 800 },
+            { id: 'EYRE-LOW', name: 'Lower Eyre Peninsula District Council', zone: 'EYRE', population: 4200 },
+            { id: 'EYRE-PORTL', name: 'Port Lincoln City', zone: 'EYRE', population: 14500 },
+            { id: 'EYRE-STA', name: 'Streaky Bay District Council', zone: 'EYRE', population: 2100 },
+            { id: 'EYRE-TUM', name: 'Tumby Bay District Council', zone: 'EYRE', population: 2500 },
+            { id: 'EYRE-WHA', name: 'Whyalla City', zone: 'EYRE', population: 22000 },
+            { id: 'EYRE-WUD', name: 'Wudinna District Council', zone: 'EYRE', population: 1200 },
+            { id: 'FAR-COO', name: 'Coober Pedy District Council', zone: 'FAR', population: 1800 },
+            { id: 'FAR-OO', name: 'Outback Communities Authority', zone: 'FAR', population: 3700 },
+            { id: 'FAR-PORTA', name: 'Port Augusta City', zone: 'FAR', population: 14000 },
+            { id: 'FAR-ROX', name: 'Roxby Downs Municipal', zone: 'FAR', population: 4100 },
+            { id: 'LIM-CAMB', name: 'Coorong District Council', zone: 'LIM', population: 5600 },
+            { id: 'LIM-KIN', name: 'Kingston District Council', zone: 'LIM', population: 2400 },
+            { id: 'LIM-LAC', name: 'Lake Alexandrina Council', zone: 'LIM', population: 11000 },
+            { id: 'LIM-LAN', name: 'Lacepede District Council', zone: 'LIM', population: 11000 },
+            { id: 'LIM-MIL', name: 'Millicent District Council', zone: 'LIM', population: 5000 },
+            { id: 'LIM-MOU', name: 'Mount Gambier City', zone: 'LIM', population: 27000 },
+            { id: 'LIM-NAR', name: 'Naracoorte Lucindale Council', zone: 'LIM', population: 8500 },
+            { id: 'LIM-REN', name: 'Renmark Paringa Council', zone: 'LIM', population: 9700 },
+            { id: 'LIM-TAT', name: 'Tatiara District Council', zone: 'LIM', population: 6700 },
+            { id: 'LIM-WAT', name: 'Wattle Range Council', zone: 'LIM', population: 12000 },
+            { id: 'YOR-ADEL', name: 'Adelaide Plains Council', zone: 'YOR', population: 10000 },
+            { id: 'YOR-BAR', name: 'Barunga West Council', zone: 'YOR', population: 2600 },
+            { id: 'YOR-CLA', name: 'Clare & Gilbert Valleys Council', zone: 'YOR', population: 9000 },
+            { id: 'YOR-FRA', name: 'Franklin Harbour District Council', zone: 'YOR', population: 1300 },
+            { id: 'YOR-GOY', name: 'Goyder Regional Council', zone: 'YOR', population: 4300 },
+            { id: 'YOR-MAL', name: 'Mallala District Council', zone: 'YOR', population: 11000 },
+            { id: 'YOR-MID', name: 'Mid Murray Council', zone: 'YOR', population: 9000 },
+            { id: 'YOR-NOR', name: 'Northern Areas Council', zone: 'YOR', population: 5200 },
+            { id: 'YOR-OAR', name: 'Orroroo/Carrieton District Council', zone: 'YOR', population: 900 },
+            { id: 'YOR-PET', name: 'Peterborough District Council', zone: 'YOR', population: 1700 },
+            { id: 'YOR-PORTP', name: 'Port Pirie City & Districts', zone: 'YOR', population: 18000 },
+            { id: 'YOR-WAK', name: 'Wakefield Regional Council', zone: 'YOR', population: 7000 },
+            { id: 'YOR-YOR', name: 'Yorke Peninsula Council', zone: 'YOR', population: 11500 }
+        ]
+    },
+    WA: {
+        name: 'Western Australia',
+        code: 'WA',
+        color: '#FFD700',
+        textColor: '#000',
+        population: 2831000,
+        lgaCount: 137,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'PER', name: 'Perth Metro' },
+            { id: 'GOL', name: 'Goldfields-Esperance' },
+            { id: 'GRE', name: 'Great Southern' },
+            { id: 'KIM', name: 'Kimberley' },
+            { id: 'MID', name: 'Mid West' },
+            { id: 'PIL', name: 'Pilbara' },
+            { id: 'SW', name: 'South West' },
+            { id: 'WHE', name: 'Wheatbelt' },
+            { id: 'PEEL', name: 'Peel' }
+        ],
+        regions: [
+            { id: 'PER-ARM', name: 'Armadale City', zone: 'PER', population: 95000 },
+            { id: 'PER-BAS', name: 'Bassendean Town', zone: 'PER', population: 16000 },
+            { id: 'PER-BAY', name: 'Bayswater City', zone: 'PER', population: 68000 },
+            { id: 'PER-BEL', name: 'Belmont City', zone: 'PER', population: 42000 },
+            { id: 'PER-CAM', name: 'Cambridge Town', zone: 'PER', population: 28000 },
+            { id: 'PER-CAN', name: 'Canning City', zone: 'PER', population: 95000 },
+            { id: 'PER-CLA', name: 'Claremont Town', zone: 'PER', population: 11000 },
+            { id: 'PER-COC', name: 'Cockburn City', zone: 'PER', population: 118000 },
+            { id: 'PER-COT', name: 'Cottesloe Town', zone: 'PER', population: 8500 },
+            { id: 'PER-EAS', name: 'East Fremantle Town', zone: 'PER', population: 8000 },
+            { id: 'PER-FRE', name: 'Fremantle City', zone: 'PER', population: 32000 },
+            { id: 'PER-GOS', name: 'Gosnells City', zone: 'PER', population: 130000 },
+            { id: 'PER-JOO', name: 'Joondalup City', zone: 'PER', population: 160000 },
+            { id: 'PER-KAL', name: 'Kalgoorlie-Boulder City', zone: 'PER', population: 32000 },
+            { id: 'PER-KAN', name: 'Karratha City', zone: 'PER', population: 24000 },
+            { id: 'PER-KWI', name: 'Kwinana City', zone: 'PER', population: 45000 },
+            { id: 'PER-MEL', name: 'Melville City', zone: 'PER', population: 105000 },
+            { id: 'PER-MOS', name: 'Mosman Park Town', zone: 'PER', population: 9500 },
+            { id: 'PER-MUN', name: 'Mundaring Shire', zone: 'PER', population: 40000 },
+            { id: 'PER-NED', name: 'Nedlands City', zone: 'PER', population: 23000 },
+            { id: 'PER-PEP', name: 'Peppermint Grove Shire', zone: 'PER', population: 1700 },
+            { id: 'PER-PER', name: 'Perth City', zone: 'PER', population: 22000 },
+            { id: 'PER-ROC', name: 'Rockingham City', zone: 'PER', population: 136000 },
+            { id: 'PER-SER', name: 'Serpentine-Jarrahdale Shire', zone: 'PER', population: 32000 },
+            { id: 'PER-SOU', name: 'South Perth City', zone: 'PER', population: 44000 },
+            { id: 'PER-STI', name: 'Stirling City', zone: 'PER', population: 230000 },
+            { id: 'PER-SUB', name: 'Subiaco City', zone: 'PER', population: 22000 },
+            { id: 'PER-SWA', name: 'Swan City', zone: 'PER', population: 145000 },
+            { id: 'PER-VIC', name: 'Victoria Park Town', zone: 'PER', population: 36000 },
+            { id: 'PER-VIN', name: 'Vincent City', zone: 'PER', population: 36000 },
+            { id: 'PER-WAN', name: 'Wanneroo City', zone: 'PER', population: 205000 },
+            { id: 'GOL-COO', name: 'Coolgardie Shire', zone: 'GOL', population: 4100 },
+            { id: 'GOL-DUN', name: 'Dundas Shire', zone: 'GOL', population: 800 },
+            { id: 'GOL-ESP', name: 'Esperance Shire', zone: 'GOL', population: 14500 },
+            { id: 'GOL-KAL', name: 'Kalgoorlie-Boulder City', zone: 'GOL', population: 32000 },
+            { id: 'GOL-KON', name: 'Kondinin Shire', zone: 'GOL', population: 900 },
+            { id: 'GOL-KUL', name: 'Kulin Shire', zone: 'GOL', population: 700 },
+            { id: 'GOL-LAV', name: 'Laverton Shire', zone: 'GOL', population: 500 },
+            { id: 'GOL-LEO', name: 'Leonora Shire', zone: 'GOL', population: 1800 },
+            { id: 'GOL-MEN', name: 'Menzies Shire', zone: 'GOL', population: 250 },
+            { id: 'GOL-NGA', name: 'Ngaanyatjarraku Shire', zone: 'GOL', population: 1600 },
+            { id: 'GOL-RAV', name: 'Ravensthorpe Shire', zone: 'GOL', population: 2100 },
+            { id: 'GRE-ALB', name: 'Albany City', zone: 'GRE', population: 41000 },
+            { id: 'GRE-BRO', name: 'Broomehill-Tambellup Shire', zone: 'GRE', population: 1100 },
+            { id: 'GRE-CRA', name: 'Cranbrook Shire', zone: 'GRE', population: 1100 },
+            { id: 'GRE-DEN', name: 'Denmark Shire', zone: 'GRE', population: 6100 },
+            { id: 'GRE-GNO', name: 'Gnowangerup Shire', zone: 'GRE', population: 1300 },
+            { id: 'GRE-JER', name: 'Jerramungup Shire', zone: 'GRE', population: 1100 },
+            { id: 'GRE-KAT', name: 'Katanning Shire', zone: 'GRE', population: 4400 },
+            { id: 'GRE-KEN', name: 'Kent Shire', zone: 'GRE', population: 600 },
+            { id: 'GRE-KOJ', name: 'Kojonup Shire', zone: 'GRE', population: 2000 },
+            { id: 'GRE-KON', name: 'Kondinin Shire', zone: 'GRE', population: 900 },
+            { id: 'GRE-WOO', name: 'Woodanilling Shire', zone: 'GRE', population: 400 },
+            { id: 'KIM-BRO', name: 'Broome Shire', zone: 'KIM', population: 17000 },
+            { id: 'KIM-DER', name: 'Derby-West Kimberley Shire', zone: 'KIM', population: 8500 },
+            { id: 'KIM-HOO', name: 'Halls Creek Shire', zone: 'KIM', population: 4000 },
+            { id: 'KIM-WYK', name: 'Wyndham-East Kimberley Shire', zone: 'KIM', population: 7500 },
+            { id: 'MID-CAR', name: 'Carnarvon Shire', zone: 'MID', population: 5800 },
+            { id: 'MID-CHAP', name: 'Chapman Valley Shire', zone: 'MID', population: 1100 },
+            { id: 'MID-CUE', name: 'Cue Shire', zone: 'MID', population: 300 },
+            { id: 'MID-GER', name: 'Geraldton-Greenough City', zone: 'MID', population: 42000 },
+            { id: 'MID-MEE', name: 'Meekatharra Shire', zone: 'MID', population: 900 },
+            { id: 'MID-MOR', name: 'Moora Shire', zone: 'MID', population: 2500 },
+            { id: 'MID-MOU', name: 'Mount Magnet Shire', zone: 'MID', population: 400 },
+            { id: 'MID-MUL', name: 'Murchison Shire', zone: 'MID', population: 100 },
+            { id: 'MID-NOR', name: 'Northampton Shire', zone: 'MID', population: 3300 },
+            { id: 'MID-PER', name: 'Perenjori Shire', zone: 'MID', population: 600 },
+            { id: 'MID-SAN', name: 'Sandstone Shire', zone: 'MID', population: 100 },
+            { id: 'MID-SHARK', name: 'Shark Bay Shire', zone: 'MID', population: 900 },
+            { id: 'MID-THRE', name: 'Three Springs Shire', zone: 'MID', population: 600 },
+            { id: 'MID-IRW', name: 'Irwin Shire', zone: 'MID', population: 3700 },
+            { id: 'PIL-ASH', name: 'Ashburton Shire', zone: 'PIL', population: 13000 },
+            { id: 'PIL-EAS', name: 'East Pilbara Shire', zone: 'PIL', population: 11000 },
+            { id: 'PIL-KAR', name: 'Karratha City', zone: 'PIL', population: 24000 },
+            { id: 'PIL-PORT', name: 'Port Hedland Town', zone: 'PIL', population: 16000 },
+            { id: 'PIL-ROE', name: 'Roebourne Shire', zone: 'PIL', population: 18000 },
+            { id: 'SW-AUG', name: 'Augusta-Margaret River Shire', zone: 'SW', population: 18000 },
+            { id: 'SW-BUN', name: 'Bunbury City', zone: 'SW', population: 80000 },
+            { id: 'SW-BUS', name: 'Busselton City', zone: 'SW', population: 41000 },
+            { id: 'SW-CAP', name: 'Capel Shire', zone: 'SW', population: 19000 },
+            { id: 'SW-COL', name: 'Collie Shire', zone: 'SW', population: 9000 },
+            { id: 'SW-DON', name: 'Dardanup Shire', zone: 'SW', population: 17000 },
+            { id: 'SW-DONB', name: 'Donnybrook-Balingup Shire', zone: 'SW', population: 6100 },
+            { id: 'SW-HAR', name: 'Harvey Shire', zone: 'SW', population: 31000 },
+            { id: 'SW-MAN', name: 'Manjimup Shire', zone: 'SW', population: 9500 },
+            { id: 'SW-NAN', name: 'Nannup Shire', zone: 'SW', population: 1300 },
+            { id: 'WHE-BEV', name: 'Beverley Shire', zone: 'WHE', population: 1800 },
+            { id: 'WHE-BRO', name: 'Brookton Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-BRU', name: 'Bruce Rock Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-COR', name: 'Corrigin Shire', zone: 'WHE', population: 1000 },
+            { id: 'WHE-CUB', name: 'Cuballing Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-CUN', name: 'Cunderdin Shire', zone: 'WHE', population: 1500 },
+            { id: 'WHE-DAL', name: 'Dalwallinu Shire', zone: 'WHE', population: 1500 },
+            { id: 'WHE-DUM', name: 'Dumbleyung Shire', zone: 'WHE', population: 700 },
+            { id: 'WHE-KAT', name: 'Katanning Shire', zone: 'WHE', population: 4400 },
+            { id: 'WHE-KEL', name: 'Kellerberrin Shire', zone: 'WHE', population: 1100 },
+            { id: 'WHE-KON', name: 'Kondinin Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-KOO', name: 'Koorda Shire', zone: 'WHE', population: 400 },
+            { id: 'WHE-KUL', name: 'Kulin Shire', zone: 'WHE', population: 700 },
+            { id: 'WHE-LAK', name: 'Lake Grace Shire', zone: 'WHE', population: 1100 },
+            { id: 'WHE-MER', name: 'Merredin Shire', zone: 'WHE', population: 3300 },
+            { id: 'WHE-NAR', name: 'Narrogin Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-NARRO', name: 'Narrogin Town', zone: 'WHE', population: 4700 },
+            { id: 'WHE-NOO', name: 'Narembeen Shire', zone: 'WHE', population: 700 },
+            { id: 'WHE-NOR', name: 'Northam City', zone: 'WHE', population: 11500 },
+            { id: 'WHE-NUNG', name: 'Nungarin Shire', zone: 'WHE', population: 250 },
+            { id: 'WHE-PIN', name: 'Pingelly Shire', zone: 'WHE', population: 1100 },
+            { id: 'WHE-QUA', name: 'Quairading Shire', zone: 'WHE', population: 1100 },
+            { id: 'WHE-TAM', name: 'Tammin Shire', zone: 'WHE', population: 400 },
+            { id: 'WHE-TRAY', name: 'Trayning Shire', zone: 'WHE', population: 300 },
+            { id: 'WHE-VIC', name: 'Victoria Plains Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-WAG', name: 'Wagin Shire', zone: 'WHE', population: 1800 },
+            { id: 'WHE-WAND', name: 'Wandering Shire', zone: 'WHE', population: 400 },
+            { id: 'WHE-WES', name: 'West Arthur Shire', zone: 'WHE', population: 900 },
+            { id: 'WHE-WIC', name: 'Wickepin Shire', zone: 'WHE', population: 700 },
+            { id: 'WHE-WIL', name: 'Williams Shire', zone: 'WHE', population: 1000 },
+            { id: 'WHE-WON', name: 'Wongan-Ballidu Shire', zone: 'WHE', population: 1600 },
+            { id: 'WHE-WOO', name: 'Woodanilling Shire', zone: 'WHE', population: 400 },
+            { id: 'WHE-WYAL', name: 'Wyalkatchem Shire', zone: 'WHE', population: 500 },
+            { id: 'WHE-YIL', name: 'Yilgarn Shire', zone: 'WHE', population: 1100 },
+            { id: 'WHE-YORK', name: 'York Shire', zone: 'WHE', population: 3900 },
+            { id: 'PEEL-BOD', name: 'Boddington Shire', zone: 'PEEL', population: 2200 },
+            { id: 'PEEL-MAN', name: 'Mandurah City', zone: 'PEEL', population: 97000 },
+            { id: 'PEEL-MUR', name: 'Murray Shire', zone: 'PEEL', population: 19000 },
+            { id: 'PEEL-SER', name: 'Serpentine-Jarrahdale Shire', zone: 'PEEL', population: 32000 },
+            { id: 'PEEL-WAR', name: 'Waroona Shire', zone: 'PEEL', population: 4300 }
+        ]
+    },
+    TAS: {
+        name: 'Tasmania',
+        code: 'TAS',
+        color: '#006747',
+        population: 572000,
+        lgaCount: 29,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'HOB', name: 'Hobart & South' },
+            { id: 'LAU', name: 'Launceston & North' },
+            { id: 'NWC', name: 'North West & West' }
+        ],
+        regions: [
+            { id: 'HOB-BRI', name: 'Brighton Council', zone: 'HOB', population: 18000 },
+            { id: 'HOB-CLA', name: 'Clarence City', zone: 'HOB', population: 58000 },
+            { id: 'HOB-DE', name: 'Derwent Valley Council', zone: 'HOB', population: 10500 },
+            { id: 'HOB-GLEN', name: 'Glenorchy City', zone: 'HOB', population: 48000 },
+            { id: 'HOB-HOB', name: 'Hobart City', zone: 'HOB', population: 54000 },
+            { id: 'HOB-HUO', name: 'Huon Valley Council', zone: 'HOB', population: 18000 },
+            { id: 'HOB-KIN', name: 'Kingborough Council', zone: 'HOB', population: 41000 },
+            { id: 'HOB-SOR', name: 'Sorell Council', zone: 'HOB', population: 16000 },
+            { id: 'HOB-TAS', name: 'Tasman Council', zone: 'HOB', population: 2500 },
+            { id: 'LAU-BRE', name: 'Break O\'Day Council', zone: 'LAU', population: 6500 },
+            { id: 'LAU-DOR', name: 'Dorset Council', zone: 'LAU', population: 7000 },
+            { id: 'LAU-FLA', name: 'Flinders Council', zone: 'LAU', population: 1000 },
+            { id: 'LAU-GEO', name: 'George Town Council', zone: 'LAU', population: 6800 },
+            { id: 'LAU-LAU', name: 'Launceston City', zone: 'LAU', population: 69000 },
+            { id: 'LAU-MEA', name: 'Meander Valley Council', zone: 'LAU', population: 21000 },
+            { id: 'LAU-NOR', name: 'Northern Midlands Council', zone: 'LAU', population: 13500 },
+            { id: 'LAU-WES', name: 'West Tamar Council', zone: 'LAU', population: 24000 },
+            { id: 'NWC-BUR', name: 'Burnie City', zone: 'NWC', population: 20000 },
+            { id: 'NWC-CEN', name: 'Central Coast Council', zone: 'NWC', population: 22000 },
+            { id: 'NWC-CIRC', name: 'Circular Head Council', zone: 'NWC', population: 8000 },
+            { id: 'NWC-DEV', name: 'Devonport City', zone: 'NWC', population: 26000 },
+            { id: 'NWC-KEN', name: 'Kentish Council', zone: 'NWC', population: 6500 },
+            { id: 'NWC-KIN', name: 'King Island Council', zone: 'NWC', population: 1600 },
+            { id: 'NWC-LAT', name: 'Latrobe Council', zone: 'NWC', population: 12000 },
+            { id: 'NWC-MEA', name: 'Meander Valley Council', zone: 'NWC', population: 21000 },
+            { id: 'NWC-STAN', name: 'Waratah-Wynyard Council', zone: 'NWC', population: 14000 },
+            { id: 'NWC-WES', name: 'West Coast Council', zone: 'NWC', population: 4300 }
+        ]
+    },
+    NT: {
+        name: 'Northern Territory',
+        code: 'NT',
+        color: '#E65C00',
+        population: 249000,
+        lgaCount: 17,
+        zones: [
+            { id: 'all', name: 'All Zones' },
+            { id: 'DAR', name: 'Darwin Region' },
+            { id: 'ARN', name: 'Arnhem' },
+            { id: 'BARK', name: 'Barkly' },
+            { id: 'BIG', name: 'Big Rivers' },
+            { id: 'CENT', name: 'Central Australia' }
+        ],
+        regions: [
+            { id: 'DAR-DAR', name: 'Darwin City', zone: 'DAR', population: 85000 },
+            { id: 'DAR-LIT', name: 'Litchfield Municipality', zone: 'DAR', population: 25000 },
+            { id: 'DAR-PAL', name: 'Palmerston City', zone: 'DAR', population: 38000 },
+            { id: 'DAR-WAG', name: 'Wagait Shire', zone: 'DAR', population: 450 },
+            { id: 'ARN-EAS', name: 'East Arnhem Regional', zone: 'ARN', population: 11000 },
+            { id: 'ARN-WES', name: 'West Arnhem Regional', zone: 'ARN', population: 7500 },
+            { id: 'BARK-BAR', name: 'Barkly Regional', zone: 'BARK', population: 7500 },
+            { id: 'BIG-KAT', name: 'Katherine Town', zone: 'BIG', population: 11000 },
+            { id: 'BIG-ROB', name: 'Roper Gulf Regional', zone: 'BIG', population: 7500 },
+            { id: 'BIG-VIC', name: 'Victoria Daly Regional', zone: 'BIG', population: 6500 },
+            { id: 'BIG-WES', name: 'West Daly Regional', zone: 'BIG', population: 4000 },
+            { id: 'CENT-ALI', name: 'Alice Springs Town', zone: 'CENT', population: 29000 },
+            { id: 'CENT-CEN', name: 'Central Desert Regional', zone: 'CENT', population: 4500 },
+            { id: 'CENT-MAC', name: 'MacDonnell Regional', zone: 'CENT', population: 6500 },
+            { id: 'CENT-YAN', name: 'Yulara', zone: 'CENT', population: 1100 }
+        ]
+    },
+    ACT: {
+        name: 'Australian Capital Territory',
+        code: 'ACT',
+        color: '#0055A4',
+        population: 456000,
+        lgaCount: 1,
+        zones: [
+            { id: 'all', name: 'All ACT' }
+        ],
+        regions: [
+            { id: 'ACT-ACT', name: 'Australian Capital Territory', zone: 'all', population: 456000 }
+        ]
+    }
+};
+
+// Get current state data
+function getCurrentStateData() {
+    return australianStates[currentState];
+}
+
+// Get current state regions
+function getCurrentRegions() {
+    return getCurrentStateData().regions;
+}
+
+// ==================== USER INITIALS WATERMARK FUNCTIONS ====================
+
+function getUserInitials(email) {
+    if (!email) return '??';
+    
+    // If it's a demo user
+    if (email === 'demo' || email === 'demo@local') return 'DM';
+    
+    // Extract initials from email
+    const parts = email.split('@')[0].split(/[._-]/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    
+    // Fallback: first two characters of email
+    return email.substring(0, 2).toUpperCase();
+}
+
+function getUserColor(email) {
+    if (!email) return '#6B7280';
+    
+    // Generate consistent color based on email
+    const colors = [
+        '#EF4444', '#F97316', '#F59E0B', '#84CC16', '#10B981',
+        '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899',
+        '#14B8A6', '#F43F5E', '#8B5A2B', '#2DD4BF', '#A855F7'
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+        hash = email.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function createWatermarkHTML(email, date, action) {
+    const initials = getUserInitials(email);
+    const color = getUserColor(email);
+    const formattedDate = date ? formatDate(date) : 'Unknown';
+    const time = date ? new Date(date).toLocaleTimeString('en-AU', {hour: '2-digit', minute:'2-digit'}) : '';
+    
+    return `
+        <div class="watermark-container">
+            <div class="watermark-initials" style="background-color: ${color};">${initials}</div>
+            <div class="watermark-tooltip">
+                ${action} by ${email || 'Unknown'}<br>
+                ${formattedDate} ${time}
+            </div>
+        </div>
+    `;
+}
+
+function renderWatermarkForItem(item, action) {
+    const email = item.createdBy || item.updatedBy || currentUser?.email || 'demo';
+    const date = item.createdAt || item.updatedAt || new Date().toISOString();
+    return createWatermarkHTML(email, date, action);
+}
+
+// ==================== STATE SELECTOR FUNCTIONS ====================
+
+function renderStateSelector() {
+    const grid = document.getElementById('stateSelectorGrid');
+    
+    grid.innerHTML = Object.values(australianStates).map(state => `
+        <div class="state-card ${state.code.toLowerCase()} bg-white rounded-xl p-6 shadow-sm" onclick="selectState('${state.code}')">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-14 h-14 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg" style="background-color: ${state.color};">
+                    ${state.code}
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-gray-900">${state.lgaCount}</div>
+                    <div class="text-xs text-gray-500">LGAs</div>
+                </div>
+            </div>
+            <h3 class="font-bold text-gray-900 text-lg mb-1">${state.name}</h3>
+            <p class="text-sm text-gray-500">Pop: ${formatPopulation(state.population)}</p>
+        </div>
+    `).join('');
+}
+
+function selectState(stateCode) {
+    currentState = stateCode;
+    document.getElementById('stateSelectorModal').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    
+    updateStateUI();
+    initializeUI();
+    
+    showToast(`Switched to ${australianStates[stateCode].name}`, 'success');
+}
+
+function updateStateUI() {
+    const state = getCurrentStateData();
+    
+    // Update state button
+    const flagEl = document.getElementById('currentStateFlag');
+    flagEl.textContent = state.code;
+    flagEl.style.backgroundColor = state.color;
+    if (state.textColor) {
+        flagEl.style.color = state.textColor;
+    } else {
+        flagEl.style.color = 'white';
+    }
+    
+    // Update state name
+    document.getElementById('currentStateName').textContent = state.name;
+    
+    // Update LGA count
+    document.getElementById('lgaCount').textContent = `${state.lgaCount} LGAs`;
+    
+    // Update subtitle
+    document.getElementById('regionSubtitle').textContent = `Browse by zone or search all ${state.lgaCount} LGAs in ${state.name}`;
+    
+    // Update zone filters
+    renderZoneFilters();
+}
+
+function adjustColor(color, amount) {
+    const num = parseInt(color.replace('#', ''), 16);
+    const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+    const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+    return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+}
+
+function renderZoneFilters() {
+    const state = getCurrentStateData();
+    const container = document.getElementById('zoneFilters');
+    
+    container.innerHTML = state.zones.map(zone => `
+        <button onclick="filterByZone('${zone.id}')" class="zone-filter px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all" data-zone="${zone.id}">
+            ${zone.name}
+        </button>
+    `).join('');
+    
+    // Set first one as active
+    const firstBtn = container.querySelector('.zone-filter');
+    if (firstBtn) {
+        firstBtn.classList.add('active');
+        firstBtn.classList.remove('bg-white', 'text-gray-600');
+        firstBtn.style.backgroundColor = state.color;
+        firstBtn.style.color = 'white';
+    }
+}
+
+function renderStateDropdown() {
+    const container = document.getElementById('stateDropdownItems');
+    
+    container.innerHTML = Object.values(australianStates).map(state => `
+        <div class="state-dropdown-item" onclick="switchState('${state.code}')">
+            <div class="state-flag" style="background-color: ${state.color};">${state.code}</div>
+            <div>
+                <div class="font-medium text-gray-900">${state.name}</div>
+                <div class="text-xs text-gray-500">${state.lgaCount} LGAs</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function switchState(stateCode) {
+    if (stateCode === currentState) return;
+    
+    currentState = stateCode;
+    updateStateUI();
+    initializeUI();
+    
+    showToast(`Switched to ${australianStates[stateCode].name}`, 'success');
+}
+
+function formatPopulation(pop) {
+    if (pop >= 1000000) return (pop / 1000000).toFixed(2) + 'M';
+    if (pop >= 1000) return (pop / 1000).toFixed(0) + 'K';
+    return pop.toString();
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+function parseCurrency(value) {
+    if (!value || typeof value !== 'string') return 0;
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    if (!cleaned || cleaned === '.') return 0;
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+}
+
+function sumValues(tenders) {
+    if (!Array.isArray(tenders)) return 0;
+    return tenders.reduce((sum, t) => {
+        const val = parseCurrency(t?.value);
+        return sum + val;
+    }, 0);
+}
+
+function formatCurrency(value) {
+    const num = parseFloat(value) || 0;
+    if (num >= 1000000) {
+        return '$' + (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return '$' + (num / 1000).toFixed(0) + 'K';
+    }
+    return '$' + num.toFixed(0);
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
+        if (date.getFullYear() < 2000 || date.getFullYear() > 2100) return '';
+        return date.toLocaleDateString('en-AU', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    } catch (e) {
+        console.warn('Date formatting error:', e);
+        return '';
+    }
+}
+
+function formatDateForInput(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '';
+        return date.toISOString().split('T')[0];
+    } catch (e) {
+        return '';
+    }
+}
+
+// ==================== AUTHENTICATION FUNCTIONS ====================
+
+function signIn() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    
+    console.log("Login attempt:", email);
+    
+    if (!email || !password) {
+        showToast('Please enter email and password', 'error');
+        return;
+    }
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(async (userCredential) => {
+            currentUser = userCredential.user;
+            console.log("Login successful:", currentUser.email);
+            
+            try {
+                const approvedDoc = await db.collection('approvedUsers').doc(currentUser.uid).get();
+                
+                if (!approvedDoc.exists || !approvedDoc.data().approved) {
+                    console.log("User not approved, signing out...");
+                    await auth.signOut();
+                    currentUser = null;
+                    showToast('Your account is not authorized. Contact admin.', 'error');
+                    return;
+                }
+                
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('stateSelectorModal').classList.remove('hidden');
+                renderStateSelector();
+                renderStateDropdown();
+                
+                await initializeDatabase();
+                await checkAdminStatus();
+                
+                showToast('Welcome back!', 'success');
+                
+            } catch (error) {
+                console.error("Approval check error:", error);
+                showToast('Error checking account status: ' + error.message, 'error');
+                await auth.signOut();
+                currentUser = null;
+            }
+        })
+        .catch((error) => {
+            console.error("Firebase Auth Error:", error.code, error.message);
+            
+            let errorMessage = error.message;
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email.';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (error.code === 'auth/invalid-credential') {
+                errorMessage = 'Invalid email or password.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many failed attempts. Please try again later.';
+            }
+            
+            showToast('Login failed: ' + errorMessage, 'error');
+        });
+}
+
+async function checkUserApproval(user) {
+    try {
+        const approvedDoc = await db.collection('approvedUsers').doc(user.uid).get();
+        
+        if (!approvedDoc.exists || !approvedDoc.data().approved) {
+            console.log("User not approved");
+            await auth.signOut();
+            currentUser = null;
+            showToast('Your account is not authorized. Contact admin.', 'error');
+            return;
+        }
+        
+        document.getElementById('authModal').classList.add('hidden');
+        document.getElementById('stateSelectorModal').classList.remove('hidden');
+        renderStateSelector();
+        renderStateDropdown();
+        
+        await initializeDatabase();
+        await checkAdminStatus();
+        
+    } catch (error) {
+        console.error("Error checking approval:", error);
+        showToast('Error checking account status', 'error');
+    }
+}
+
+function enterDemoMode() {
+    isDemoMode = true;
+    currentUser = { uid: 'demo', email: 'demo@local' };
+    
+    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('stateSelectorModal').classList.remove('hidden');
+    renderStateSelector();
+    renderStateDropdown();
+    
+    const saved = localStorage.getItem('ausCrmDemoData');
+    if (saved) {
+        database = JSON.parse(saved);
+    }
+    
+    updateSyncStatus('Demo Mode');
+    showToast('Demo mode activated. Select a state to continue.', 'info');
+}
+
+function signOut() {
+    if (isDemoMode) {
+        isDemoMode = false;
+        currentUser = null;
+        database = { tenders: [], crmContacts: [], interactions: [] };
+    } else {
+        auth.signOut();
+        currentUser = null;
+    }
+    
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('stateSelectorModal').classList.add('hidden');
+    document.getElementById('authModal').classList.remove('hidden');
+    document.getElementById('demoBadge').classList.add('hidden');
+    document.getElementById('adminButton').classList.add('hidden');
+}
+
+async function checkIfAdmin() {
+    if (isDemoMode) return false;
+    if (!currentUser) return false;
+    
+    try {
+        const adminDoc = await db.collection('admins').doc(currentUser.uid).get();
+        console.log("Admin check:", adminDoc.exists);
+        return adminDoc.exists;
+    } catch (error) {
+        console.error("Error checking admin status:", error);
+        return false;
+    }
+}
+
+async function checkAdminStatus() {
+    try {
+        const isAdmin = await checkIfAdmin();
+        const adminButton = document.getElementById('adminButton');
+        if (isAdmin) {
+            adminButton.classList.remove('hidden');
+            console.log("Admin button shown");
+        } else {
+            adminButton.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error("Error in checkAdminStatus:", error);
+    }
+}
+
+// ==================== DATABASE FUNCTIONS ====================
+
+async function initializeDatabase() {
+    if (isDemoMode) return;
+    
+    try {
+        updateSyncStatus('Loading...');
+        
+        const tendersSnapshot = await db.collection('tenders').get();
+        database.tenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const contactsSnapshot = await db.collection('crmContacts').get();
+        database.crmContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const interactionsSnapshot = await db.collection('interactions').get();
+        database.interactions = interactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        updateSyncStatus('Synced');
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showToast('Error loading data', 'error');
+        updateSyncStatus('Error');
+    }
+}
+
+async function saveData() {
+    if (isDemoMode) {
+        localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        return;
+    }
+    
+    updateSyncStatus('Syncing...');
+    
+    try {
+        for (const tender of database.tenders) {
+            const tenderRef = db.collection('tenders').doc(String(tender.id));
+            await tenderRef.set(tender);
+        }
+        
+        for (const contact of database.crmContacts) {
+            const contactRef = db.collection('crmContacts').doc(String(contact.id));
+            await contactRef.set(contact);
+        }
+        
+        for (const interaction of database.interactions) {
+            const interactionRef = db.collection('interactions').doc(String(interaction.id));
+            await interactionRef.set(interaction);
+        }
+        
+        updateSyncStatus('Synced');
+        console.log('Data saved to Firebase');
+    } catch (error) {
+        console.error('Error saving data:', error);
+        updateSyncStatus('Error');
+        showToast('Error saving data: ' + error.message, 'error');
+        throw error;
+    }
+}
+
+// ==================== UI INITIALIZATION ====================
+
+function initializeUI() {
+    renderRegionTabs();
+    populateRegionFilters();
+    const regions = getCurrentRegions();
+    if (regions.length > 0) {
+        loadRegion(regions[0].id);
+    }
+    updateAllStats();
+}
+
+function renderRegionTabs() {
+    const container = document.getElementById('regionTabs');
+    const regions = getCurrentRegions();
+    
+    container.innerHTML = regions.map(region => `
+        <button onclick="loadRegion('${region.id}')" 
+                class="region-tab px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-all whitespace-nowrap"
+                data-region="${region.id}"
+                data-zone="${region.zone}">
+            ${region.name}
+        </button>
+    `).join('');
+}
+
+function populateRegionFilters() {
+    const regionSelects = ['crmRegion', 'crmRegionFilter', 'tenderRegion'];
+    const regions = getCurrentRegions();
+    
+    regionSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        const firstOption = select.options[0];
+        select.innerHTML = '';
+        if (firstOption) select.appendChild(firstOption);
+        
+        regions.forEach(region => {
+            const option = document.createElement('option');
+            option.value = region.id;
+            option.textContent = region.name;
+            select.appendChild(option);
+        });
+    });
+}
+
+function filterByZone(zone) {
+    const state = getCurrentStateData();
+    
+    document.querySelectorAll('.zone-filter').forEach(btn => {
+        if (btn.dataset.zone === zone) {
+            btn.classList.add('active');
+            btn.classList.remove('bg-white', 'text-gray-600');
+            btn.style.backgroundColor = state.color;
+            btn.style.color = 'white';
+        } else {
+            btn.classList.remove('active');
+            btn.classList.add('bg-white', 'text-gray-600');
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+        }
+    });
+    
+    document.querySelectorAll('.region-tab').forEach(tab => {
+        if (zone === 'all' || tab.dataset.zone === zone) {
+            tab.style.display = 'block';
+        } else {
+            tab.style.display = 'none';
+        }
+    });
+}
+
+// ==================== MAIN TAB SWITCHING ====================
+
+function switchMainTab(tab) {
+    currentMainTab = tab;
+    
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    
+    document.querySelectorAll('.main-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('content-' + tab).classList.remove('hidden');
+    
+    if (tab === 'tenders') {
+        loadRegion(currentRegion || getCurrentRegions()[0]?.id);
+    } else if (tab === 'crm') {
+        renderCRMContacts();
+    } else if (tab === 'analytics') {
+        renderAnalytics();
+    }
+}
+
+// ==================== TENDER FUNCTIONS ====================
+
+function loadRegion(regionId) {
+    currentRegion = regionId;
+    const state = getCurrentStateData();
+    
+    document.querySelectorAll('.region-tab').forEach(tab => {
+        if (tab.dataset.region === regionId) {
+            tab.classList.add('text-white');
+            tab.classList.remove('bg-white', 'text-gray-600');
+            tab.style.backgroundColor = state.color;
+        } else {
+            tab.classList.remove('text-white');
+            tab.classList.add('bg-white', 'text-gray-600');
+            tab.style.backgroundColor = '';
+        }
+    });
+    
+    const regions = getCurrentRegions();
+    const region = regions.find(r => r.id === regionId);
+    const regionTenders = database.tenders.filter(t => t.regionId === regionId && t.state === currentState);
+    
+    document.getElementById('regionContent').innerHTML = `
+        <div class="glass-panel rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold display-font text-gray-900">${region.name}</h2>
+                    <p class="text-sm text-gray-500 mt-1">${regionTenders.length} tenders</p>
+                    ${region.population ? `<p class="text-xs text-gray-400 mt-1">Population: ${formatPopulation(region.population)}</p>` : ''}
+                </div>
+                <button onclick="showAddTenderModal('${regionId}')" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: ${state.color};">
+                    <i class="fas fa-plus mr-2"></i> Add Tender
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${regionTenders.map(tender => renderTenderCard(tender)).join('')}
+        </div>
+        
+        ${regionTenders.length === 0 ? `
+        <div class="text-center py-12 text-gray-400">
+            <i class="fas fa-inbox text-4xl mb-3"></i>
+            <p>No tenders for this region yet</p>
+        </div>
+        ` : ''}
+    `;
+}
+
+function renderTenderCard(tender) {
+    const statusColors = {
+        'TO_PRICE': 'status-to-price',
+        'PRICED': 'status-priced',
+        'NOT_PRICING': 'status-not-pricing',
+        'AWARDED': 'bg-yellow-100 text-yellow-800',
+        'NOT_WON': 'bg-red-100 text-red-800'
+    };
+    
+    const commentCount = tender.comments?.length || 0;
+    const action = tender.createdAt === tender.updatedAt ? 'Created' : 'Updated';
+    const watermark = renderWatermarkForItem(tender, action);
+    
+    return `
+    <div class="region-card rounded-xl p-5 shadow-sm card-hover relative group">
+        ${watermark}
+        <div class="flex justify-between items-start mb-3 pr-10">
+            <span class="text-xs font-semibold px-2 py-1 rounded ${statusColors[tender.status] || 'bg-gray-100'}">
+                ${tender.status.replace('_', ' ')}
+            </span>
+            <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="event.stopPropagation(); editTender(${tender.id})" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="event.stopPropagation(); deleteTender(${tender.id})" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+        <span class="text-xs text-gray-500 block mb-2">${tender.category}</span>
+        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 cursor-pointer" onclick="editTender(${tender.id})">${tender.title}</h3>
+        <div class="text-sm text-gray-600 mb-2">${tender.value || 'No value set'}</div>
+        <div class="flex justify-between items-center">
+            ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> ${formatDate(tender.closingDate)}</div>` : '<div></div>'}
+            ${commentCount > 0 ? `<div class="text-xs text-blue-600 font-medium"><i class="fas fa-comments mr-1"></i> ${commentCount}</div>` : ''}
+        </div>
+    </div>
+    `;
+}
+
+function showAddTenderModal(regionId) {
+    document.getElementById('tenderModalTitle').textContent = 'Add New Tender';
+    document.getElementById('tenderForm').reset();
+    document.getElementById('tenderId').value = '';
+    document.getElementById('tenderRegion').value = regionId || currentRegion;
+    
+    document.getElementById('pricedFields').classList.add('hidden');
+    document.getElementById('notPricingFields').classList.add('hidden');
+    document.getElementById('awardedFields').classList.add('hidden');
+    document.getElementById('notWonFields').classList.add('hidden');
+
+    renderTenderComments(null);
+    document.getElementById('tenderModal').classList.remove('hidden');
+}
+
+function editTender(id) {
+    const tender = database.tenders.find(t => t.id === id);
+    if (!tender) return;
+    
+    document.getElementById('tenderModalTitle').textContent = 'Edit Tender';
+    document.getElementById('tenderId').value = id;
+    document.getElementById('tenderRegion').value = tender.regionId;
+    document.getElementById('tenderTitle').value = tender.title;
+    document.getElementById('tenderCategory').value = tender.category;
+    document.getElementById('tenderStatus').value = tender.status;
+    document.getElementById('tenderValue').value = tender.value || '';
+    document.getElementById('tenderClosingDate').value = tender.closingDate || '';
+    document.getElementById('tenderDescription').value = tender.description || '';
+    document.getElementById('tenderContactName').value = tender.contact?.name || '';
+    document.getElementById('tenderContactPosition').value = tender.contact?.position || '';
+    document.getElementById('tenderContactEmail').value = tender.contact?.email || '';
+    document.getElementById('tenderContactPhone').value = tender.contact?.phone || '';
+    
+    togglePricingFields();
+    
+    if (tender.status === 'PRICED') {
+        document.getElementById('ourPrice').value = tender.ourPrice || '';
+        document.getElementById('submissionDate').value = tender.submissionDate || '';
+    } else if (tender.status === 'NOT_PRICING') {
+        document.getElementById('notPricingReason').value = tender.notPricingReason || '';
+        document.getElementById('notPricingComments').value = tender.notPricingComments || '';
+    } else if (tender.status === 'AWARDED') {
+        document.getElementById('awardedDate').value = tender.awardedDate || '';
+        document.getElementById('awardedValue').value = tender.awardedValue || '';
+        document.getElementById('awardedScope').value = tender.awardedScope || '';
+    } else if (tender.status === 'NOT_WON') {
+        document.getElementById('winnerName').value = tender.winnerName || '';
+        document.getElementById('winnerPrice').value = tender.winnerPrice || '';
+        document.getElementById('ourLosingPrice').value = tender.ourLosingPrice || '';
+        document.getElementById('resultDate').value = tender.resultDate || '';
+        document.getElementById('notWonComments').value = tender.notWonComments || '';
+    }
+    
+    renderTenderComments(id);
+    document.getElementById('tenderModal').classList.remove('hidden');
+}
+
+async function deleteTender(id) {
+    const tender = database.tenders.find(t => t.id === id);
+    if (!tender) return;
+
+    if (!confirm(`Are you sure you want to delete "${tender.title}"?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        if (!isDemoMode && currentUser) {
+            await db.collection('tenders').doc(String(id)).delete();
+        }
+        
+        database.tenders = database.tenders.filter(t => t.id !== id);
+        
+        if (isDemoMode) {
+            localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        }
+        
+        loadRegion(tender.regionId);
+        updateAllStats();
+        showToast('Tender deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting tender:', error);
+        showToast('Error deleting tender: ' + error.message, 'error');
+    }
+}
+
+function renderTenderComments(tenderId) {
+    const container = document.getElementById('tenderCommentsList');
+    
+    if (!tenderId) {
+        container.innerHTML = '<p class="text-sm text-gray-400 italic">Save tender to add comments</p>';
+        return;
+    }
+    
+    const tender = database.tenders.find(t => t.id === tenderId);
+    
+    if (!tender || !tender.comments || tender.comments.length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-400 italic">No comments yet</p>';
+        return;
+    }
+    
+    const sortedComments = [...tender.comments].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    container.innerHTML = sortedComments.map(comment => `
+        <div class="bg-white border border-gray-200 rounded-lg p-3 text-sm">
+            <div class="flex justify-between items-start mb-1">
+                <span class="font-medium text-gray-900">${comment.author}</span>
+                <span class="text-xs text-gray-500">${formatDate(comment.date)} at ${new Date(comment.date).toLocaleTimeString('en-AU', {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <p class="text-gray-700">${comment.text}</p>
+        </div>
+    `).join('');
+}
+
+async function addTenderComment() {
+    const tenderId = document.getElementById('tenderId').value;
+    const commentText = document.getElementById('newTenderComment').value.trim();
+    
+    if (!commentText) {
+        showToast('Please enter a comment', 'warning');
+        return;
+    }
+    
+    if (!tenderId) {
+        showToast('Save the tender first before adding comments', 'warning');
+        return;
+    }
+    
+    const tender = database.tenders.find(t => t.id == tenderId);
+    if (!tender) return;
+    
+    if (!tender.comments) tender.comments = [];
+    
+    const newComment = {
+        id: Date.now(),
+        text: commentText,
+        author: currentUser?.email || currentUser?.uid || 'Demo User',
+        date: new Date().toISOString()
+    };
+    
+    tender.comments.push(newComment);
+    tender.updatedAt = new Date().toISOString();
+    tender.updatedBy = currentUser?.email || 'demo';
+    
+    document.getElementById('newTenderComment').value = '';
+    
+    renderTenderComments(parseInt(tenderId));
+    
+    await saveData();
+    showToast('Comment added', 'success');
+}
+
+function togglePricingFields() {
+    const status = document.getElementById('tenderStatus').value;
+    
+    document.getElementById('pricedFields').classList.add('hidden');
+    document.getElementById('notPricingFields').classList.add('hidden');
+    document.getElementById('awardedFields').classList.add('hidden');
+    document.getElementById('notWonFields').classList.add('hidden');
+    
+    if (status === 'PRICED') {
+        document.getElementById('pricedFields').classList.remove('hidden');
+    } else if (status === 'NOT_PRICING') {
+        document.getElementById('notPricingFields').classList.remove('hidden');
+    } else if (status === 'AWARDED') {
+        document.getElementById('awardedFields').classList.remove('hidden');
+    } else if (status === 'NOT_WON') {
+        document.getElementById('notWonFields').classList.remove('hidden');
+    }
+}
+
+function closeTenderModal() {
+    document.getElementById('tenderModal').classList.add('hidden');
+}
+
+async function saveTender(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('tenderId').value;
+    const status = document.getElementById('tenderStatus').value;
+    
+    const tenderData = {
+        state: currentState,
+        regionId: document.getElementById('tenderRegion').value,
+        title: document.getElementById('tenderTitle').value,
+        category: document.getElementById('tenderCategory').value,
+        status: status,
+        value: document.getElementById('tenderValue').value,
+        closingDate: document.getElementById('tenderClosingDate').value,
+        description: document.getElementById('tenderDescription').value,
+        contact: {
+            name: document.getElementById('tenderContactName').value,
+            position: document.getElementById('tenderContactPosition').value,
+            email: document.getElementById('tenderContactEmail').value,
+            phone: document.getElementById('tenderContactPhone').value
+        },
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || 'demo'
+    };
+    
+    if (status === 'PRICED') {
+        tenderData.ourPrice = document.getElementById('ourPrice').value;
+        tenderData.submissionDate = document.getElementById('submissionDate').value;
+    } else if (status === 'NOT_PRICING') {
+        tenderData.notPricingReason = document.getElementById('notPricingReason').value;
+        tenderData.notPricingComments = document.getElementById('notPricingComments').value;
+    } else if (status === 'AWARDED') {
+        tenderData.awardedDate = document.getElementById('awardedDate').value;
+        tenderData.awardedValue = document.getElementById('awardedValue').value;
+        tenderData.awardedScope = document.getElementById('awardedScope').value;
+    } else if (status === 'NOT_WON') {
+        tenderData.winnerName = document.getElementById('winnerName').value;
+        tenderData.winnerPrice = document.getElementById('winnerPrice').value;
+        tenderData.ourLosingPrice = document.getElementById('ourLosingPrice').value;
+        tenderData.resultDate = document.getElementById('resultDate').value;
+        tenderData.notWonComments = document.getElementById('notWonComments').value;
+    }
+    
+    if (id) {
+        const index = database.tenders.findIndex(t => t.id == id);
+        if (index !== -1) {
+            tenderData.id = parseInt(id);
+            tenderData.createdAt = database.tenders[index].createdAt;
+            tenderData.createdBy = database.tenders[index].createdBy;
+            tenderData.comments = database.tenders[index].comments || [];
+            database.tenders[index] = tenderData;
+        }
+    } else {
+        tenderData.id = Date.now();
+        tenderData.createdAt = new Date().toISOString();
+        tenderData.createdBy = currentUser?.email || 'demo';
+        tenderData.comments = [];
+        database.tenders.push(tenderData);
+    }
+    
+    try {
+        await saveData();
+        closeTenderModal();
+        loadRegion(tenderData.regionId);
+        updateAllStats();
+        showToast('Tender saved successfully!', 'success');
+    } catch (error) {
+        showToast('Error saving tender: ' + error.message, 'error');
+    }
+}
+
+// ==================== CRM FUNCTIONS ====================
+
+function handleCategoryChange() {
+    const category = document.getElementById('crmCategory').value;
+    const regionField = document.getElementById('crmRegion');
+    const regionHelp = document.getElementById('regionHelp');
+    
+    if (category === 'Council') {
+        regionField.required = true;
+        regionHelp.textContent = 'Required for Council contacts';
+        regionHelp.classList.add('text-red-500');
+    } else {
+        regionField.required = false;
+        regionHelp.textContent = 'Optional for non-Council contacts';
+        regionHelp.classList.remove('text-red-500');
+    }
+}
+
+function renderCRMContacts() {
+    const container = document.getElementById('crmContactsList');
+    const searchQuery = document.getElementById('crmSearch')?.value?.toLowerCase() || '';
+    const categoryFilter = document.getElementById('crmCategoryFilter')?.value || 'all';
+    const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
+    
+    let contacts = database.crmContacts || [];
+    
+    // Filter by current state
+    contacts = contacts.filter(c => c.state === currentState);
+    
+    if (searchQuery) {
+        contacts = contacts.filter(c => 
+            c.name?.toLowerCase().includes(searchQuery) ||
+            c.position?.toLowerCase().includes(searchQuery) ||
+            c.department?.toLowerCase().includes(searchQuery) ||
+            c.email?.toLowerCase().includes(searchQuery)
+        );
+    }
+    
+    if (categoryFilter !== 'all') {
+        contacts = contacts.filter(c => c.category === categoryFilter);
+    }
+    
+    if (regionFilter !== 'all') {
+        contacts = contacts.filter(c => c.regionId === regionFilter);
+    }
+    
+    const categories = ['Council', 'Supplier', 'Contractor', 'Competitor'];
+    const groupedByCategory = {};
+    
+    categories.forEach(cat => {
+        groupedByCategory[cat] = contacts.filter(c => c.category === cat);
+    });
+    
+    let html = '';
+    
+    categories.forEach(category => {
+        const categoryContacts = groupedByCategory[category];
+        if (categoryContacts.length === 0) return;
+        
+        const categoryConfig = {
+            'Council': { color: 'blue', icon: 'fa-landmark', border: 'category-council' },
+            'Supplier': { color: 'green', icon: 'fa-truck', border: 'category-supplier' },
+            'Contractor': { color: 'orange', icon: 'fa-hard-hat', border: 'category-contractor' },
+            'Competitor': { color: 'red', icon: 'fa-chess', border: 'category-competitor' }
+        }[category];
+        
+        html += `
+        <div class="col-span-1 lg:col-span-2 mb-4">
+            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                <span class="w-8 h-8 rounded-full bg-${categoryConfig.color}-100 text-${categoryConfig.color}-600 flex items-center justify-center mr-2">
+                    <i class="fas ${categoryConfig.icon}"></i>
+                </span>
+                ${category}s
+                <span class="ml-2 text-sm font-normal text-gray-500">(${categoryContacts.length})</span>
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                ${categoryContacts.map(contact => renderContactCard(contact, categoryConfig)).join('')}
+            </div>
+        </div>
+        `;
+    });
+    
+    if (html === '') {
+        html = `
+        <div class="col-span-1 lg:col-span-2 text-center py-12 text-gray-400">
+            <i class="fas fa-users text-4xl mb-3"></i>
+            <p>No contacts found</p>
+        </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+    updateCRMStats();
+}
+
+function renderContactCard(contact, categoryConfig) {
+    const regions = getCurrentRegions();
+    const region = regions.find(r => r.id === contact.regionId);
+    const interactions = database.interactions?.filter(i => i.contactId === contact.id) || [];
+    const action = contact.createdAt === contact.updatedAt ? 'Created' : 'Updated';
+    const watermark = renderWatermarkForItem(contact, action);
+    
+    return `
+    <div class="crm-contact-card ${categoryConfig.border} rounded-xl p-5 shadow-sm card-hover relative">
+        ${watermark}
+        <div class="flex justify-between items-start mb-3 pr-10">
+            <div class="flex items-start space-x-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-${categoryConfig.color}-100 to-${categoryConfig.color}-200 flex items-center justify-center text-${categoryConfig.color}-700 font-bold text-xl flex-shrink-0">
+                    ${contact.name.charAt(0)}
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
+                    <p class="text-${categoryConfig.color}-600 font-medium text-sm">${contact.position}</p>
+                    <p class="text-sm text-gray-500">${contact.department || region?.name || 'No organization'}</p>
+                    <div class="flex gap-2 mt-1">
+                        <span class="category-badge category-${contact.category.toLowerCase()}">
+                            <i class="fas ${categoryConfig.icon} mr-1"></i> ${contact.category}
+                        </span>
+                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                            ${contact.type}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-1">
+                <button onclick="showAddInteractionModal(${contact.id})" class="p-2 text-${categoryConfig.color}-600 hover:bg-${categoryConfig.color}-50 rounded-lg transition-colors" title="Add Interaction">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+                <button onclick="editCRMContact(${contact.id})" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteCRMContact(${contact.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-1 text-sm mb-3">
+            <div class="text-gray-600"><i class="fas fa-envelope w-5 text-gray-400"></i> ${contact.email}</div>
+            ${contact.directPhone ? `<div class="text-gray-600"><i class="fas fa-phone w-5 text-gray-400"></i> ${contact.directPhone}</div>` : ''}
+            ${contact.mobile ? `<div class="text-gray-600"><i class="fas fa-mobile w-5 text-gray-400"></i> ${contact.mobile}</div>` : ''}
+        </div>
+
+        ${contact.notes ? `<div class="bg-gray-50 rounded-lg p-2 text-sm text-gray-600 mb-3 italic line-clamp-2">${contact.notes}</div>` : ''}
+
+        ${interactions.length > 0 ? `
+        <div class="border-t pt-3">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-500">Last Interaction</span>
+                <span class="text-xs text-gray-400">${interactions.length} total</span>
+            </div>
+            <div class="text-xs text-gray-500">${formatDate(interactions[interactions.length-1].date)} • ${interactions[interactions.length-1].type}</div>
+            <div class="text-sm text-gray-700 line-clamp-1">${interactions[interactions.length-1].notes}</div>
+        </div>
+        ` : ''}
+
+        ${contact.followUpDate && new Date(contact.followUpDate) >= new Date() ? `
+        <div class="mt-3 p-2 bg-orange-50 rounded-lg border border-orange-100 flex items-center text-sm text-orange-800">
+            <i class="fas fa-bell mr-2"></i>
+            Follow-up: ${formatDate(contact.followUpDate)}
+        </div>
+        ` : ''}
+    </div>
+    `;
+}
+
+function searchCRM() {
+    renderCRMContacts();
+}
+
+function filterCRM() {
+    renderCRMContacts();
+}
+
+function showAddCRMModal() {
+    document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
+    document.getElementById('crmContactId').value = '';
+    document.getElementById('crmForm').reset();
+    
+    handleCategoryChange();
+    
+    document.getElementById('crmModal').classList.remove('hidden');
+}
+
+function editCRMContact(id) {
+    const contact = database.crmContacts.find(c => c.id === id);
+    if (!contact) return;
+
+    document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
+    document.getElementById('crmContactId').value = id;
+    document.getElementById('crmCategory').value = contact.category || 'Council';
+    document.getElementById('crmRegion').value = contact.regionId || '';
+    document.getElementById('crmType').value = contact.type;
+    document.getElementById('crmName').value = contact.name;
+    document.getElementById('crmPosition').value = contact.position;
+    document.getElementById('crmDepartment').value = contact.department || '';
+    document.getElementById('crmDirectPhone').value = contact.directPhone || '';
+    document.getElementById('crmMobile').value = contact.mobile || '';
+    document.getElementById('crmEmail').value = contact.email;
+    document.getElementById('crmLinkedIn').value = contact.linkedIn || '';
+    document.getElementById('crmNotes').value = contact.notes || '';
+    document.getElementById('crmLastContactDate').value = contact.lastContactDate || '';
+    document.getElementById('crmLastContactType').value = contact.lastContactType || '';
+    document.getElementById('crmLastContactNotes').value = contact.lastContactNotes || '';
+    document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
+    document.getElementById('crmPriority').value = contact.priority || 'Medium';
+
+    handleCategoryChange();
+    document.getElementById('crmModal').classList.remove('hidden');
+}
+
+async function deleteCRMContact(id) {
+    const contact = database.crmContacts.find(c => c.id === id);
+    if (!contact) {
+        showToast('Contact not found', 'error');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${contact.name}?\n\nThis will also delete all associated interactions. This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        updateSyncStatus('Deleting...');
+        
+        if (!isDemoMode && currentUser) {
+            await db.collection('crmContacts').doc(String(id)).delete();
+            
+            const interactionsSnapshot = await db.collection('interactions')
+                .where('contactId', '==', id)
+                .get();
+            
+            const batch = db.batch();
+            interactionsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+        }
+        
+        database.crmContacts = database.crmContacts.filter(c => c.id !== id);
+        
+        if (database.interactions) {
+            database.interactions = database.interactions.filter(i => i.contactId !== id);
+        }
+        
+        if (isDemoMode) {
+            localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        }
+        
+        renderCRMContacts();
+        updateAllStats();
+        updateSyncStatus(isDemoMode ? 'Demo Mode' : 'Synced');
+        showToast('Contact and associated interactions deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting contact:', error);
+        updateSyncStatus('Error');
+        showToast('Error deleting contact: ' + error.message, 'error');
+        
+        if (!isDemoMode) {
+            await initializeDatabase();
+        }
+    }
+}
+
+function closeCRMModal() {
+    document.getElementById('crmModal').classList.add('hidden');
+}
+
+async function saveCRM(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('crmContactId').value;
+    const category = document.getElementById('crmCategory').value;
+
+    if (category === 'Council' && !document.getElementById('crmRegion').value) {
+        showToast('Please select a region for Council contacts', 'error');
+        return;
+    }
+
+    const contactData = {
+        state: currentState,
+        category: category,
+        regionId: document.getElementById('crmRegion').value,
+        type: document.getElementById('crmType').value,
+        name: document.getElementById('crmName').value,
+        position: document.getElementById('crmPosition').value,
+        department: document.getElementById('crmDepartment').value,
+        directPhone: document.getElementById('crmDirectPhone').value,
+        mobile: document.getElementById('crmMobile').value,
+        email: document.getElementById('crmEmail').value,
+        linkedIn: document.getElementById('crmLinkedIn').value,
+        notes: document.getElementById('crmNotes').value,
+        lastContactDate: document.getElementById('crmLastContactDate').value,
+        lastContactType: document.getElementById('crmLastContactType').value,
+        lastContactNotes: document.getElementById('crmLastContactNotes').value,
+        followUpDate: document.getElementById('crmFollowUpDate').value,
+        priority: document.getElementById('crmPriority').value,
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || currentUser?.uid || 'demo'
+    };
+
+    if (id) {
+        const index = database.crmContacts.findIndex(c => c.id == id);
+        if (index !== -1) {
+            contactData.id = parseInt(id);
+            contactData.interactions = database.crmContacts[index].interactions || [];
+            contactData.createdAt = database.crmContacts[index].createdAt;
+            contactData.createdBy = database.crmContacts[index].createdBy;
+            database.crmContacts[index] = contactData;
+        }
+    } else {
+        contactData.id = Date.now();
+        contactData.interactions = [];
+        contactData.createdAt = new Date().toISOString();
+        contactData.createdBy = currentUser?.email || currentUser?.uid || 'demo';
+        database.crmContacts.push(contactData);
+    }
+
+    try {
+        await saveData();
+        closeCRMModal();
+        renderCRMContacts();
+        updateAllStats();
+        showToast('Contact saved successfully!', 'success');
+    } catch (error) {
+        showToast('Error saving contact: ' + error.message, 'error');
+    }
+}
+
+// ==================== INTERACTION FUNCTIONS ====================
+
+function showAddInteractionModal(contactId) {
+    document.getElementById('interactionContactId').value = contactId;
+    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('interactionForm').reset();
+    document.getElementById('interactionDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('interactionModal').classList.remove('hidden');
+}
+
+function closeInteractionModal() {
+    document.getElementById('interactionModal').classList.add('hidden');
+}
+
+async function saveInteraction(event) {
+    event.preventDefault();
+
+    const contactId = parseInt(document.getElementById('interactionContactId').value);
+
+    const interaction = {
+        id: Date.now(),
+        contactId: contactId,
+        date: document.getElementById('interactionDate').value,
+        type: document.getElementById('interactionType').value,
+        notes: document.getElementById('interactionNotes').value,
+        nextSteps: document.getElementById('interactionNextSteps').value,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.email || 'demo'
+    };
+
+    if (!database.interactions) database.interactions = [];
+    database.interactions.push(interaction);
+
+    const contact = database.crmContacts.find(c => c.id === contactId);
+    if (contact) {
+        contact.lastContactDate = interaction.date;
+        contact.lastContactType = interaction.type;
+        contact.lastContactNotes = interaction.notes;
+    }
+
+    try {
+        await saveData();
+        closeInteractionModal();
+        renderCRMContacts();
+        showToast('Interaction added!', 'success');
+    } catch (error) {
+        showToast('Error saving interaction: ' + error.message, 'error');
+    }
+}
+
+// ==================== ANALYTICS FUNCTIONS ====================
+
+function renderAnalytics() {
+    const tenders = database.tenders.filter(t => t.state === currentState) || [];
+
+    const priced = tenders.filter(t => t.status === 'PRICED' || t.status === 'AWARDED' || t.status === 'NOT_WON');
+    const won = tenders.filter(t => t.status === 'AWARDED');
+    const lost = tenders.filter(t => t.status === 'NOT_WON');
+    const winRate = priced.length > 0 ? ((won.length / priced.length) * 100).toFixed(1) : 0;
+
+    document.getElementById('analyticsTotalPriced').textContent = priced.length;
+    document.getElementById('analyticsWon').textContent = won.length;
+    document.getElementById('analyticsLost').textContent = lost.length;
+    document.getElementById('analyticsWinRate').textContent = winRate + '%';
+
+    const toPriceValue = sumValues(tenders.filter(t => t.status === 'TO_PRICE'));
+    const pricedValue = sumValues(tenders.filter(t => t.status === 'PRICED'));
+    const awardedValue = sumValues(tenders.filter(t => t.status === 'AWARDED'));
+    const totalPipeline = toPriceValue + pricedValue + awardedValue;
+
+    document.getElementById('analyticsToPriceValue').textContent = formatCurrency(toPriceValue);
+    document.getElementById('analyticsPricedValue').textContent = formatCurrency(pricedValue);
+    document.getElementById('analyticsAwardedValue').textContent = formatCurrency(awardedValue);
+    document.getElementById('analyticsTotalPipeline').textContent = formatCurrency(totalPipeline);
+
+    const regionStats = {};
+    tenders.forEach(t => {
+        if (!regionStats[t.regionId]) {
+            regionStats[t.regionId] = { total: 0, won: 0, value: 0 };
+        }
+        regionStats[t.regionId].total++;
+        if (t.status === 'AWARDED') {
+            regionStats[t.regionId].won++;
+            regionStats[t.regionId].value += parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0;
+        }
+    });
+
+    const regions = getCurrentRegions();
+    const sortedRegions = Object.entries(regionStats)
+        .sort((a, b) => b[1].value - a[1].value)
+        .slice(0, 10);
+
+    const state = getCurrentStateData();
+
+    document.getElementById('regionPerformanceList').innerHTML = sortedRegions.map(([regionId, stats]) => {
+        const region = regions.find(r => r.id === regionId);
+        const winRate = stats.total > 0 ? ((stats.won / stats.total) * 100).toFixed(0) : 0;
+        return `
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style="background-color: ${state.color};">
+                    ${winRate}%
+                </div>
+                <div>
+                    <div class="font-semibold text-gray-900">${region?.name}</div>
+                    <div class="text-sm text-gray-500">${stats.won}/${stats.total} won</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-bold text-gray-900">${formatCurrency(stats.value)}</div>
+                <div class="text-sm text-gray-500">awarded</div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+function updateAllStats() {
+    const stateTenders = database.tenders.filter(t => t.state === currentState);
+    
+    const toPrice = stateTenders.filter(t => t.status === 'TO_PRICE').length;
+    const priced = stateTenders.filter(t => t.status === 'PRICED').length;
+    const notPricing = stateTenders.filter(t => t.status === 'NOT_PRICING').length;
+    const awarded = stateTenders.filter(t => t.status === 'AWARDED').length;
+    const notWon = stateTenders.filter(t => t.status === 'NOT_WON').length;
+
+    document.getElementById('statToPrice').textContent = toPrice;
+    document.getElementById('statPriced').textContent = priced;
+    document.getElementById('statNotPricing').textContent = notPricing;
+    document.getElementById('statAwarded').textContent = awarded;
+    document.getElementById('statNotWon').textContent = notWon;
+
+    const totalAwarded = stateTenders
+        .filter(t => t.status === 'AWARDED')
+        .reduce((sum, t) => sum + (parseFloat(t.awardedValue?.replace(/[^0-9.]/g, '')) || 0), 0);
+    document.getElementById('statTotalValue').textContent = formatCurrency(totalAwarded);
+
+    updateCRMStats();
+}
+
+function updateCRMStats() {
+    const contacts = database.crmContacts?.filter(c => c.state === currentState) || [];
+    
+    document.getElementById('crmTotalContacts').textContent = contacts.length;
+    document.getElementById('crmCouncils').textContent = contacts.filter(c => c.category === 'Council').length;
+    document.getElementById('crmSuppliers').textContent = contacts.filter(c => c.category === 'Supplier').length;
+    document.getElementById('crmContractors').textContent = contacts.filter(c => c.category === 'Contractor').length;
+    document.getElementById('crmCompetitors').textContent = contacts.filter(c => c.category === 'Competitor').length;
+}
+
+function updateSyncStatus(status) {
+    const indicator = document.getElementById('syncStatus');
+    if (status === 'Synced' || status === 'Demo Mode') {
+        indicator.innerHTML = `<i class="fas ${isDemoMode ? 'fa-flask' : 'fa-check-circle'} mr-1"></i> ${status}`;
+        indicator.className = isDemoMode ? 'flex items-center text-amber-600' : 'flex items-center text-green-600';
+    } else if (status === 'Offline') {
+        indicator.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i> Offline';
+        indicator.className = 'flex items-center text-orange-600';
+    } else {
+        indicator.innerHTML = '<i class="fas fa-sync-alt mr-1 fa-spin"></i> ' + status;
+        indicator.className = 'flex items-center text-blue-600';
+    }
+}
+
+function globalSearch() {
+    const query = document.getElementById('globalSearch').value.toLowerCase();
+    if (!query) {
+        if (currentMainTab === 'tenders') loadRegion(currentRegion);
+        else if (currentMainTab === 'crm') renderCRMContacts();
+        return;
+    }
+
+    const filteredTenders = database.tenders.filter(t => 
+        t.state === currentState &&
+        (t.title.toLowerCase().includes(query) || 
+        t.category.toLowerCase().includes(query) ||
+        t.contact?.name.toLowerCase().includes(query))
+    );
+
+    if (currentMainTab === 'tenders') {
+        const regions = getCurrentRegions();
+        document.getElementById('regionContent').innerHTML = `
+            <div class="glass-panel rounded-2xl p-6 mb-6">
+                <h2 class="text-xl font-bold display-font mb-4">Search Results: "${query}"</h2>
+                <p class="text-gray-600 mb-4">Found ${filteredTenders.length} tenders</p>
+                <button onclick="loadRegion('${currentRegion}')" class="text-blue-600 hover:underline mb-4">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to region view
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${filteredTenders.map(tender => {
+                    const region = regions.find(r => r.id === tender.regionId);
+                    return `
+                    <div class="bg-white rounded-xl p-5 shadow-sm card-hover cursor-pointer" onclick="loadRegion('${tender.regionId}'); setTimeout(() => editTender(${tender.id}), 100)">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">${region?.name}</span>
+                            <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">${tender.status}</span>
+                        </div>
+                        <h4 class="font-bold text-gray-900 mb-2">${tender.title}</h4>
+                        <div class="text-sm text-gray-600">${tender.value}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+}
+
+function exportToExcel() {
+    const state = getCurrentStateData();
+    const stateTenders = database.tenders.filter(t => t.state === currentState);
+    const stateContacts = database.crmContacts?.filter(c => c.state === currentState) || [];
+    const regions = getCurrentRegions();
+    
+    let csv = 'Type,State,Region,Title,Category,Status,Value,Closing Date,Contact Name,Contact Email,Contact Phone,Description,Created By,Created Date\n';
+
+    stateTenders.forEach(t => {
+        const region = regions.find(r => r.id === t.regionId);
+        csv += `Tender,${currentState},${region?.name},"${t.title}","${t.category}","${t.status}","${t.value}","${t.closingDate}","${t.contact?.name}","${t.contact?.email}","${t.contact?.phone}","${t.description}","${t.createdBy}","${t.createdAt}"\n`;
+    });
+
+    stateContacts.forEach(c => {
+        const region = regions.find(r => r.id === c.regionId);
+        csv += `Contact,${currentState},${region?.name},"${c.name}","${c.category}","${c.position}","${c.department}","${c.email}","${c.directPhone}","${c.mobile}","${c.notes}","${c.createdBy}","${c.createdAt}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${state.code}_Business_CRM_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+
+    showToast('Report exported successfully!', 'success');
+}
+
+function shareReport() {
+    const state = getCurrentStateData();
+    const stateTenders = database.tenders.filter(t => t.state === currentState);
+    const stateContacts = database.crmContacts?.filter(c => c.state === currentState) || [];
+    
+    const shareData = {
+        title: `${state.name} Business Development & CRM Report`,
+        text: `Managing ${stateTenders.length} tenders and ${stateContacts.length} contacts across ${state.lgaCount} LGAs in ${state.name}`,
+        url: window.location.href
+    };
+
+    if (navigator.share) {
+        navigator.share(shareData);
     } else {
         navigator.clipboard.writeText(window.location.href);
         showToast('Link copied to clipboard!', 'success');
     }
 }
+
+function quickAdd() {
+    if (currentMainTab === 'tenders') {
+        showAddTenderModal();
+    } else if (currentMainTab === 'crm') {
+        showAddCRMModal();
+    } else if (currentMainTab === 'analytics') {
+        switchMainTab('tenders');
+        setTimeout(() => showAddTenderModal(), 100);
+    }
+}
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500',
+        warning: 'bg-amber-500'
+    };
+
+    toast.className = `toast ${colors[type] || colors.info} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`;
+    toast.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ==================== ADMIN FUNCTIONS ====================
+
+async function showAdminPanel() {
+    console.log("Admin panel requested");
+    
+    try {
+        const isAdmin = await checkIfAdmin();
+        console.log("Is admin:", isAdmin);
+        
+        if (!isAdmin) {
+            showToast('Access denied. Admin only.', 'error');
+            return;
+        }
+
+        document.getElementById('adminPanel').classList.remove('hidden');
+        await loadApprovedUsers();
+        
+    } catch (error) {
+        console.error("Error opening admin panel:", error);
+        showToast('Error opening admin panel: ' + error.message, 'error');
+    }
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminPanel').classList.add('hidden');
+}
+
+async function loadApprovedUsers() {
+    try {
+        const snapshot = await db.collection('approvedUsers')
+            .where('approved', '==', true)
+            .orderBy('approvedAt', 'desc')
+            .get();
+
+        const container = document.getElementById('approvedUsersList');
+
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-center py-4">No approved users yet</p>';
+            return;
+        }
+
+        container.innerHTML = snapshot.docs.map(doc => {
+            const data = doc.data();
+            const date = data.approvedAt ? new Date(data.approvedAt).toLocaleDateString('en-AU') : 'Unknown';
+            return `
+            <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
+                <div>
+                    <div class="font-medium text-gray-900">${data.email}</div>
+                    <div class="text-xs text-green-700">Approved: ${date}</div>
+                </div>
+                <button onclick="revokeAccess('${doc.id}')" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fas fa-user-times"></i> Revoke
+                </button>
+            </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading approved users:", err);
+        document.getElementById('approvedUsersList').innerHTML = `
+            <p class="text-red-400 text-center py-4">Error loading users: ${err.message}</p>
+        `;
+    }
+}
+
+async function revokeAccess(uid) {
+    if (!confirm('Are you sure you want to revoke this user\'s access?')) {
+        return;
+    }
+
+    try {
+        await db.collection('approvedUsers').doc(uid).update({
+            approved: false,
+            revokedAt: new Date().toISOString(),
+            revokedBy: currentUser.email
+        });
+
+        showToast('Access revoked', 'success');
+        await loadApprovedUsers();
+
+    } catch (err) {
+        showToast('Error revoking access: ' + err.message, 'error');
+    }
+}
+
+// ==================== INITIALIZATION ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Close modals on outside click
+    window.onclick = function(event) {
+        const modals = ['tenderModal', 'crmModal', 'interactionModal', 'adminPanel'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    };
+});
+</script>
+</body>
+</html>
+
 
 function quickAdd() {
     if (currentMainTab === 'tenders') {
