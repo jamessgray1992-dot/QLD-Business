@@ -523,6 +523,9 @@
                     <button onclick="switchMainTab('analytics')" id="tab-analytics" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
                         <i class="fas fa-chart-line mr-2 text-purple-600"></i> Analytics & Pipeline
                     </button>
+                    <button onclick="switchMainTab('feedback')" id="tab-feedback" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-star mr-2 text-yellow-500"></i> Customer Feedback
+                    </button>
                 </div>
             </div>
         </div>
@@ -763,6 +766,148 @@
                 </div>
             </div>
 
+
+            <!-- CUSTOMER FEEDBACK TAB CONTENT -->
+            <div id="content-feedback" class="main-content hidden">
+                <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Customer Feedback</h2>
+                        <p class="text-gray-600">Track customer feedback by state, region and LGA, linked to project numbers.</p>
+                    </div>
+                    <button onclick="showAddFeedbackModal()" class="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors shadow-sm flex items-center self-start">
+                        <i class="fas fa-plus mr-2"></i> Add Feedback
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-yellow-50 rounded-xl p-5 border border-yellow-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-yellow-600 font-medium">Total Entries</p><h3 class="text-3xl font-bold text-yellow-900" id="fbTotal">-</h3></div>
+                            <i class="fas fa-comments text-yellow-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-5 border border-green-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-green-600 font-medium">Positive</p><h3 class="text-3xl font-bold text-green-900" id="fbPositive">-</h3></div>
+                            <i class="fas fa-thumbs-up text-green-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-red-50 rounded-xl p-5 border border-red-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-red-600 font-medium">Negative</p><h3 class="text-3xl font-bold text-red-900" id="fbNegative">-</h3></div>
+                            <i class="fas fa-thumbs-down text-red-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-blue-600 font-medium">Projects Tracked</p><h3 class="text-3xl font-bold text-blue-900" id="fbProjects">-</h3></div>
+                            <i class="fas fa-project-diagram text-blue-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-3 mb-6">
+                    <input type="text" id="fbSearch" placeholder="Search feedback..."
+                           class="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:outline-none"
+                           oninput="renderFeedback()">
+                    <select id="fbRegionFilter" onchange="renderFeedback()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                        <option value="all">All Regions</option>
+                    </select>
+                    <select id="fbSentimentFilter" onchange="renderFeedback()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                        <option value="all">All Sentiment</option>
+                        <option value="Positive">Positive</option>
+                        <option value="Neutral">Neutral</option>
+                        <option value="Negative">Negative</option>
+                    </select>
+                    <select id="fbSortMode" onchange="renderFeedback()" class="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                        <option value="date">Sort by Date</option>
+                        <option value="project">Sort by Project</option>
+                        <option value="region">Sort by Region</option>
+                        <option value="rating">Sort by Rating</option>
+                    </select>
+                </div>
+
+                <div id="fbProjectSortPanel" class="hidden mb-6 bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-sort-amount-down mr-2 text-blue-500"></i> Projects with Feedback &mdash; click to filter
+                    </h3>
+                    <div id="fbProjectList" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <div id="fbContent" class="space-y-6"></div>
+            </div>
+
+        </div>
+
+        <!-- Feedback Modal -->
+        <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                    <h3 class="text-xl font-bold display-font" id="feedbackModalTitle">Add Customer Feedback</h3>
+                    <button onclick="closeFeedbackModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <form id="feedbackForm" class="p-6 space-y-4" onsubmit="saveFeedback(event)">
+                    <input type="hidden" id="feedbackEntryId">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                            <select id="fbStateInput" onchange="updateFbRegions()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white"></select>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Region / LGA *</label>
+                            <select id="fbRegionInput" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                                <option value="">Select region...</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Number *</label>
+                            <input type="text" id="fbProjectNumber" required placeholder="e.g. PRJ-2024-001" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                            <input type="text" id="fbProjectName" placeholder="Short description" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Customer / Organisation</label>
+                            <input type="text" id="fbCustomer" placeholder="Contact name or organisation" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="fbDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sentiment</label>
+                            <select id="fbSentiment" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                                <option value="Positive">Positive</option>
+                                <option value="Neutral">Neutral</option>
+                                <option value="Negative">Negative</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rating (1-5)</label>
+                            <select id="fbRating" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none bg-white">
+                                <option value="5">5 Stars - Excellent</option>
+                                <option value="4">4 Stars - Good</option>
+                                <option value="3" selected>3 Stars - Average</option>
+                                <option value="2">2 Stars - Poor</option>
+                                <option value="1">1 Star - Very Poor</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Feedback *</label>
+                            <textarea id="fbFeedbackText" required rows="4" placeholder="Enter customer feedback..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none resize-none"></textarea>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Action Taken / Follow-up</label>
+                            <textarea id="fbAction" rows="2" placeholder="Any actions taken or planned..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-yellow-400 focus:outline-none resize-none"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-2 border-t">
+                        <button type="button" onclick="closeFeedbackModal()" class="px-6 py-2 border-2 border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium">Save Feedback</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Tender Entry Modal -->
@@ -2271,6 +2416,11 @@ async function initializeDatabase() {
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .filter(i => loadedContactIds.has(i.contactId));
         
+        const feedbackSnapshot = await db.collection('customerFeedback')
+            .where('state', '==', currentState)
+            .get();
+        database.customerFeedback = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         updateSyncStatus('Synced');
     } catch (error) {
         console.error('Error loading data:', error);
@@ -2313,6 +2463,11 @@ async function refreshDataForState() {
         } else {
             database.interactions = [];
         }
+        
+        const feedbackSnapshot = await db.collection('customerFeedback')
+            .where('state', '==', currentState)
+            .get();
+        database.customerFeedback = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         updateSyncStatus('Synced');
     } catch (error) {
@@ -2444,6 +2599,9 @@ function switchMainTab(tab) {
         renderCRMContacts();
     } else if (tab === 'analytics') {
         renderAnalytics();
+    } else if (tab === 'feedback') {
+        populateFbRegionFilter();
+        renderFeedback();
     }
 }
 
@@ -3293,7 +3451,7 @@ function globalSearch() {
         t.state === currentState &&
         (t.title.toLowerCase().includes(query) || 
         t.category.toLowerCase().includes(query) ||
-        t.contact?.name.toLowerCase().includes(query))
+        t.contact?.name?.toLowerCase().includes(query))
     );
 
     if (currentMainTab === 'tenders') {
@@ -3379,6 +3537,8 @@ function quickAdd() {
     } else if (currentMainTab === 'analytics') {
         switchMainTab('tenders');
         setTimeout(() => showAddTenderModal(), 100);
+    } else if (currentMainTab === 'feedback') {
+        showAddFeedbackModal();
     }
 }
 
@@ -3493,12 +3653,313 @@ async function revokeAccess(uid) {
     }
 }
 
+
+// ==================== CUSTOMER FEEDBACK FUNCTIONS ====================
+
+let fbActiveProjectFilter = null;
+
+function populateFbStateInput() {
+    const sel = document.getElementById('fbStateInput');
+    if (!sel) return;
+    sel.innerHTML = Object.values(australianStates).map(s =>
+        `<option value="${s.code}" ${s.code === currentState ? 'selected' : ''}>${s.name}</option>`
+    ).join('');
+    updateFbRegions();
+}
+
+function updateFbRegions() {
+    const stateCode = document.getElementById('fbStateInput')?.value || currentState;
+    const state = australianStates[stateCode];
+    const sel = document.getElementById('fbRegionInput');
+    if (!sel || !state) return;
+    sel.innerHTML = '<option value="">Select region...</option>' +
+        state.regions.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+}
+
+function populateFbRegionFilter() {
+    const sel = document.getElementById('fbRegionFilter');
+    if (!sel) return;
+    const regions = getCurrentRegions();
+    sel.innerHTML = '<option value="all">All Regions</option>' +
+        regions.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+}
+
+function showAddFeedbackModal(editId) {
+    const modal = document.getElementById('feedbackModal');
+    const form = document.getElementById('feedbackForm');
+    form.reset();
+    document.getElementById('feedbackEntryId').value = '';
+    document.getElementById('feedbackModalTitle').textContent = 'Add Customer Feedback';
+    document.getElementById('fbDate').value = new Date().toISOString().split('T')[0];
+    populateFbStateInput();
+
+    if (editId) {
+        const entry = (database.customerFeedback || []).find(f => f.id === editId);
+        if (entry) {
+            document.getElementById('feedbackEntryId').value = entry.id;
+            document.getElementById('feedbackModalTitle').textContent = 'Edit Feedback';
+            document.getElementById('fbStateInput').value = entry.state;
+            updateFbRegions();
+            document.getElementById('fbRegionInput').value = entry.regionId;
+            document.getElementById('fbProjectNumber').value = entry.projectNumber;
+            document.getElementById('fbProjectName').value = entry.projectName || '';
+            document.getElementById('fbCustomer').value = entry.customer || '';
+            document.getElementById('fbDate').value = entry.date || '';
+            document.getElementById('fbSentiment').value = entry.sentiment || 'Positive';
+            document.getElementById('fbRating').value = entry.rating || 3;
+            document.getElementById('fbFeedbackText').value = entry.feedback || '';
+            document.getElementById('fbAction').value = entry.action || '';
+        }
+    }
+    modal.classList.remove('hidden');
+}
+
+function closeFeedbackModal() {
+    document.getElementById('feedbackModal').classList.add('hidden');
+}
+
+async function saveFeedback(event) {
+    event.preventDefault();
+    const id = document.getElementById('feedbackEntryId').value;
+    const stateCode = document.getElementById('fbStateInput').value;
+    const regionId = document.getElementById('fbRegionInput').value;
+    const state = australianStates[stateCode];
+    const region = state?.regions.find(r => r.id === regionId);
+
+    const entry = {
+        state: stateCode,
+        stateName: state?.name || stateCode,
+        regionId: regionId,
+        regionName: region?.name || regionId,
+        projectNumber: document.getElementById('fbProjectNumber').value.trim(),
+        projectName: document.getElementById('fbProjectName').value.trim(),
+        customer: document.getElementById('fbCustomer').value.trim(),
+        date: document.getElementById('fbDate').value,
+        sentiment: document.getElementById('fbSentiment').value,
+        rating: parseInt(document.getElementById('fbRating').value),
+        feedback: document.getElementById('fbFeedbackText').value.trim(),
+        action: document.getElementById('fbAction').value.trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || 'demo'
+    };
+
+    if (!database.customerFeedback) database.customerFeedback = [];
+
+    if (id) {
+        const idx = database.customerFeedback.findIndex(f => f.id == id);
+        if (idx !== -1) {
+            entry.id = parseInt(id);
+            entry.createdAt = database.customerFeedback[idx].createdAt;
+            entry.createdBy = database.customerFeedback[idx].createdBy;
+            database.customerFeedback[idx] = entry;
+        }
+    } else {
+        entry.id = Date.now();
+        entry.createdAt = new Date().toISOString();
+        entry.createdBy = currentUser?.email || 'demo';
+        database.customerFeedback.push(entry);
+    }
+
+    try {
+        if (!isDemoMode && currentUser && db) {
+            await db.collection('customerFeedback').doc(String(entry.id)).set(entry);
+        }
+        if (isDemoMode) {
+            localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        }
+        closeFeedbackModal();
+        renderFeedback();
+        updateFeedbackStats();
+        showToast('Feedback saved!', 'success');
+    } catch (err) {
+        showToast('Error saving feedback: ' + err.message, 'error');
+    }
+}
+
+async function deleteFeedbackEntry(id) {
+    if (!confirm('Delete this feedback entry? This cannot be undone.')) return;
+    database.customerFeedback = (database.customerFeedback || []).filter(f => f.id !== id);
+    try {
+        if (!isDemoMode && currentUser && db) {
+            await db.collection('customerFeedback').doc(String(id)).delete();
+        }
+        if (isDemoMode) localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        renderFeedback();
+        updateFeedbackStats();
+        showToast('Feedback deleted', 'success');
+    } catch (err) {
+        showToast('Error deleting: ' + err.message, 'error');
+    }
+}
+
+function updateFeedbackStats() {
+    const all = (database.customerFeedback || []).filter(f => f.state === currentState);
+    document.getElementById('fbTotal').textContent = all.length;
+    document.getElementById('fbPositive').textContent = all.filter(f => f.sentiment === 'Positive').length;
+    document.getElementById('fbNegative').textContent = all.filter(f => f.sentiment === 'Negative').length;
+    const projects = new Set(all.map(f => f.projectNumber));
+    document.getElementById('fbProjects').textContent = projects.size;
+}
+
+function renderFeedback() {
+    const container = document.getElementById('fbContent');
+    if (!container) return;
+
+    const sortMode = document.getElementById('fbSortMode')?.value || 'date';
+    const sentimentFilter = document.getElementById('fbSentimentFilter')?.value || 'all';
+    const regionFilter = document.getElementById('fbRegionFilter')?.value || 'all';
+    const search = document.getElementById('fbSearch')?.value?.toLowerCase() || '';
+
+    // Show/hide project sort panel
+    const projectPanel = document.getElementById('fbProjectSortPanel');
+    if (sortMode === 'project') {
+        projectPanel.classList.remove('hidden');
+    } else {
+        projectPanel.classList.add('hidden');
+        fbActiveProjectFilter = null;
+    }
+
+    let entries = (database.customerFeedback || []).filter(f => f.state === currentState);
+
+    if (sentimentFilter !== 'all') entries = entries.filter(f => f.sentiment === sentimentFilter);
+    if (regionFilter !== 'all') entries = entries.filter(f => f.regionId === regionFilter);
+    if (search) entries = entries.filter(f =>
+        f.projectNumber?.toLowerCase().includes(search) ||
+        f.projectName?.toLowerCase().includes(search) ||
+        f.customer?.toLowerCase().includes(search) ||
+        f.feedback?.toLowerCase().includes(search) ||
+        f.regionName?.toLowerCase().includes(search)
+    );
+    if (fbActiveProjectFilter) entries = entries.filter(f => f.projectNumber === fbActiveProjectFilter);
+
+    updateFeedbackStats();
+
+    // Build project sort panel
+    if (sortMode === 'project') {
+        const allEntries = (database.customerFeedback || []).filter(f => f.state === currentState);
+        const projectMap = {};
+        allEntries.forEach(f => {
+            if (!projectMap[f.projectNumber]) projectMap[f.projectNumber] = { name: f.projectName, count: 0, sentiments: [] };
+            projectMap[f.projectNumber].count++;
+            projectMap[f.projectNumber].sentiments.push(f.sentiment);
+        });
+        const projectListEl = document.getElementById('fbProjectList');
+        projectListEl.innerHTML = Object.entries(projectMap)
+            .sort((a,b) => b[1].count - a[1].count)
+            .map(([num, info]) => {
+                const pos = info.sentiments.filter(s => s === 'Positive').length;
+                const neg = info.sentiments.filter(s => s === 'Negative').length;
+                const isActive = fbActiveProjectFilter === num;
+                const badgeColor = neg > pos ? 'bg-red-100 border-red-300 text-red-800' : pos > neg ? 'bg-green-100 border-green-300 text-green-800' : 'bg-gray-100 border-gray-300 text-gray-800';
+                return `<button onclick="filterByProject('${num}')" class="px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${isActive ? 'bg-blue-600 border-blue-700 text-white shadow' : badgeColor}">
+                    ${num}${info.name ? ' · ' + info.name : ''} <span class="opacity-70">(${info.count})</span>
+                </button>`;
+            }).join('');
+    }
+
+    // Sort entries
+    if (sortMode === 'date') entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+    else if (sortMode === 'project') entries.sort((a,b) => a.projectNumber.localeCompare(b.projectNumber));
+    else if (sortMode === 'region') entries.sort((a,b) => (a.regionName||'').localeCompare(b.regionName||''));
+    else if (sortMode === 'rating') entries.sort((a,b) => b.rating - a.rating);
+
+    if (entries.length === 0) {
+        container.innerHTML = `<div class="text-center py-16 text-gray-400"><i class="fas fa-comment-slash text-4xl mb-4"></i><p class="text-lg">No feedback entries found</p><button onclick="showAddFeedbackModal()" class="mt-4 px-6 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600">Add First Entry</button></div>`;
+        return;
+    }
+
+    // Group by region or project depending on sort mode
+    const groupKey = sortMode === 'region' || sortMode === 'date' ? 'regionName' : sortMode === 'project' ? 'projectNumber' : 'regionName';
+    const grouped = {};
+    entries.forEach(f => {
+        const key = sortMode === 'project' ? `${f.projectNumber}${f.projectName ? ' – ' + f.projectName : ''}` : f.regionName || f.regionId;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(f);
+    });
+
+    const state = getCurrentStateData();
+    let html = '';
+    Object.entries(grouped).forEach(([groupName, groupEntries]) => {
+        const avgRating = (groupEntries.reduce((s,e) => s + (e.rating||3), 0) / groupEntries.length).toFixed(1);
+        const pos = groupEntries.filter(e => e.sentiment === 'Positive').length;
+        const neg = groupEntries.filter(e => e.sentiment === 'Negative').length;
+        html += `
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 flex justify-between items-center" style="background: linear-gradient(135deg,${state.color}15,${state.color}05); border-bottom: 3px solid ${state.color}">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full text-white font-bold flex items-center justify-center text-sm" style="background-color:${state.color}">${groupEntries.length}</div>
+                    <div>
+                        <h3 class="font-bold text-gray-900">${groupName}</h3>
+                        <div class="flex gap-3 text-xs text-gray-500 mt-0.5">
+                            <span class="text-green-600"><i class="fas fa-thumbs-up mr-1"></i>${pos}</span>
+                            <span class="text-red-600"><i class="fas fa-thumbs-down mr-1"></i>${neg}</span>
+                            <span><i class="fas fa-star mr-1 text-yellow-400"></i>Avg ${avgRating}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="divide-y divide-gray-100">
+                ${groupEntries.map(entry => renderFeedbackCard(entry)).join('')}
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function filterByProject(projectNum) {
+    fbActiveProjectFilter = fbActiveProjectFilter === projectNum ? null : projectNum;
+    renderFeedback();
+}
+
+function renderFeedbackCard(entry) {
+    const sentimentConfig = {
+        'Positive': { color: 'green', icon: 'fa-thumbs-up', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
+        'Neutral': { color: 'gray', icon: 'fa-minus-circle', bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-600' },
+        'Negative': { color: 'red', icon: 'fa-thumbs-down', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' }
+    }[entry.sentiment] || { color: 'gray', icon: 'fa-comment', bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-600' };
+
+    const stars = Array.from({length: 5}, (_,i) =>
+        `<i class="fas fa-star ${i < entry.rating ? 'text-yellow-400' : 'text-gray-200'} text-xs"></i>`
+    ).join('');
+
+    return `
+    <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+        <div class="flex justify-between items-start gap-4">
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                        <i class="fas fa-hashtag mr-1"></i>${entry.projectNumber}
+                    </span>
+                    ${entry.projectName ? `<span class="text-sm text-gray-600 font-medium">${entry.projectName}</span>` : ''}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${sentimentConfig.bg} ${sentimentConfig.border} border ${sentimentConfig.text}">
+                        <i class="fas ${sentimentConfig.icon} mr-1"></i>${entry.sentiment}
+                    </span>
+                    <span class="flex items-center gap-0.5">${stars}</span>
+                </div>
+                <p class="text-gray-800 text-sm mb-2">${entry.feedback}</p>
+                ${entry.action ? `<div class="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 inline-block"><i class="fas fa-tasks mr-1"></i>${entry.action}</div>` : ''}
+                <div class="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
+                    ${entry.customer ? `<span><i class="fas fa-user mr-1"></i>${entry.customer}</span>` : ''}
+                    ${entry.regionName ? `<span><i class="fas fa-map-marker-alt mr-1"></i>${entry.regionName}</span>` : ''}
+                    ${entry.date ? `<span><i class="fas fa-calendar mr-1"></i>${formatDate(entry.date)}</span>` : ''}
+                </div>
+            </div>
+            <div class="flex gap-1 flex-shrink-0">
+                <button onclick="showAddFeedbackModal(${entry.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit"><i class="fas fa-edit text-sm"></i></button>
+                <button onclick="deleteFeedbackEntry(${entry.id})" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Delete"><i class="fas fa-trash-alt text-sm"></i></button>
+            </div>
+        </div>
+    </div>`;
+}
+
+
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', function() {
     // Close modals on outside click
     window.onclick = function(event) {
-        const modals = ['tenderModal', 'crmModal', 'interactionModal', 'adminPanel'];
+        const modals = ['tenderModal', 'crmModal', 'interactionModal', 'adminPanel', 'feedbackModal'];
         modals.forEach(modalId => {
             const modal = document.getElementById(modalId);
             if (event.target === modal) {
@@ -3510,4 +3971,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
