@@ -1989,18 +1989,31 @@ function switchState(stateCode) {
     if (stateCode === currentState) return;
     
     currentState = stateCode;
+    currentRegion = null; // Reset region selection
+    
     updateStateUI();
-    initializeUI();
+    renderRegionTabs();
+    populateRegionFilters();
+    
+    // Refresh data for new state, then update UI
+    refreshDataForState().then(() => {
+        const regions = getCurrentRegions();
+        if (regions.length > 0) {
+            loadRegion(regions[0].id);
+        }
+        
+        // Refresh current tab content
+        if (currentMainTab === 'crm') {
+            renderCRMContacts();
+        } else if (currentMainTab === 'analytics') {
+            renderAnalytics();
+        }
+        
+        updateAllStats();
+    });
     
     showToast(`Switched to ${australianStates[stateCode].name}`, 'success');
 }
-
-function formatPopulation(pop) {
-    if (pop >= 1000000) return (pop / 1000000).toFixed(2) + 'M';
-    if (pop >= 1000) return (pop / 1000).toFixed(0) + 'K';
-    return pop.toString();
-}
-
 // ==================== UTILITY FUNCTIONS ====================
 
 function parseCurrency(value) {
@@ -2237,7 +2250,55 @@ async function initializeDatabase() {
         updateSyncStatus('Error');
     }
 }
+async function refreshDataForState() {
+    if (isDemoMode) {
+        // In demo mode, data is already in localStorage, just filter client-side
+        return;
+    }
+    
+    // In Firebase mode, optionally re-fetch to ensure fresh data
+    updateSyncStatus('Loading...');
+    
+    try {
+        // Re-fetch tenders for this state only
+        const tendersSnapshot = await db.collection('tenders')
+            .where('state', '==', currentState)
+            .get();
+        
+        // Update database with all tenders (we keep other states in memory,
+        // but filter by currentState in display functions)
+        const newTenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Remove old tenders for this state and add new ones
+        database.tenders = database.tenders.filter(t => t.state !== currentState);
+        database.tenders.push(...newTenders);
+        
+        // Same for contacts
+        const contactsSnapshot = await db.collection('crmContacts')
+            .where('state', '==', currentState)
+            .get();
+        const newContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        database.crmContacts = database.crmContacts.filter(c => c.state !== currentState);
+        database.crmContacts.push(...newContacts);
+        
+        updateSyncStatus('Synced');
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        updateSyncStatus('Error');
+    }
+}
 
+// THEN initializeUI() continues...
+
+function initializeUI() {
+    renderRegionTabs();
+    populateRegionFilters();
+    const regions = getCurrentRegions();
+    if (regions.length > 0) {
+        loadRegion(regions[0].id);
+    }
+    updateAllStats();
+}
 async function saveData() {
     if (isDemoMode) {
         localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
@@ -2385,7 +2446,7 @@ function loadRegion(regionId) {
     
     const regions = getCurrentRegions();
     const region = regions.find(r => r.id === regionId);
-    const regionTenders = database.tenders.filter(t => t.regionId === regionId && t.state === currentState);
+const regionTenders = database.tenders.filter(t => t.regionId === regionId && t.state === currentState);
     
     document.getElementById('regionContent').innerHTML = `
         <div class="glass-panel rounded-2xl p-6 mb-6">
@@ -2724,11 +2785,13 @@ function renderCRMContacts() {
     const categoryFilter = document.getElementById('crmCategoryFilter')?.value || 'all';
     const regionFilter = document.getElementById('crmRegionFilter')?.value || 'all';
     
+    // Start with ALL contacts, then filter by current state FIRST
     let contacts = database.crmContacts || [];
     
-    // Filter by current state
+    // STRICT: Filter by current state first
     contacts = contacts.filter(c => c.state === currentState);
     
+    // Then apply other filters
     if (searchQuery) {
         contacts = contacts.filter(c => 
             c.name?.toLowerCase().includes(searchQuery) ||
@@ -3150,6 +3213,7 @@ function renderAnalytics() {
 // ==================== UTILITY FUNCTIONS ====================
 
 function updateAllStats() {
+    // STRICT filtering by current state
     const stateTenders = database.tenders.filter(t => t.state === currentState);
     
     const toPrice = stateTenders.filter(t => t.status === 'TO_PRICE').length;
