@@ -2001,20 +2001,26 @@ function switchState(stateCode) {
     if (stateCode === currentState) return;
     
     currentState = stateCode;
-    currentRegion = null; // Reset region selection
+    currentRegion = null;
+    
+    // Clear database immediately to prevent showing old state data
+    database.tenders = [];
+    database.crmContacts = [];
+    database.interactions = [];
     
     updateStateUI();
     renderRegionTabs();
     populateRegionFilters();
     
-    // Refresh data for new state, then update UI
+    // Reset stats to 0 while loading
+    updateAllStats();
+    
     refreshDataForState().then(() => {
         const regions = getCurrentRegions();
         if (regions.length > 0) {
             loadRegion(regions[0].id);
         }
         
-        // Refresh current tab content
         if (currentMainTab === 'crm') {
             renderCRMContacts();
         } else if (currentMainTab === 'analytics') {
@@ -2247,14 +2253,23 @@ async function initializeDatabase() {
     try {
         updateSyncStatus('Loading...');
         
-        const tendersSnapshot = await db.collection('tenders').get();
+        // Only load tenders for the current state, not all states
+        const tendersSnapshot = await db.collection('tenders')
+            .where('state', '==', currentState)
+            .get();
         database.tenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        const contactsSnapshot = await db.collection('crmContacts').get();
+        const contactsSnapshot = await db.collection('crmContacts')
+            .where('state', '==', currentState)
+            .get();
         database.crmContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         const interactionsSnapshot = await db.collection('interactions').get();
-        database.interactions = interactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filter interactions by contacts we have loaded
+        const loadedContactIds = new Set(database.crmContacts.map(c => c.id));
+        database.interactions = interactionsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(i => loadedContactIds.has(i.contactId));
         
         updateSyncStatus('Synced');
     } catch (error) {
@@ -2263,37 +2278,41 @@ async function initializeDatabase() {
         updateSyncStatus('Error');
     }
 }
-
 async function refreshDataForState() {
     if (isDemoMode) {
-        // In demo mode, data is already in localStorage, just filter client-side
+        // In demo mode, filter the existing data
         return;
     }
     
-    // In Firebase mode, optionally re-fetch to ensure fresh data
     updateSyncStatus('Loading...');
     
     try {
-        // Re-fetch tenders for this state only
+        // Clear existing data for other states to ensure clean slate
+        database.tenders = [];
+        database.crmContacts = [];
+        database.interactions = [];
+        
+        // Fetch only current state data
         const tendersSnapshot = await db.collection('tenders')
             .where('state', '==', currentState)
             .get();
+        database.tenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Update database with all tenders (we keep other states in memory,
-        // but filter by currentState in display functions)
-        const newTenders = tendersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Remove old tenders for this state and add new ones
-        database.tenders = database.tenders.filter(t => t.state !== currentState);
-        database.tenders.push(...newTenders);
-        
-        // Same for contacts
         const contactsSnapshot = await db.collection('crmContacts')
             .where('state', '==', currentState)
             .get();
-        const newContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        database.crmContacts = database.crmContacts.filter(c => c.state !== currentState);
-        database.crmContacts.push(...newContacts);
+        database.crmContacts = contactsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Load interactions for loaded contacts
+        if (database.crmContacts.length > 0) {
+            const contactIds = database.crmContacts.map(c => c.id);
+            const interactionsSnapshot = await db.collection('interactions')
+                .where('contactId', 'in', contactIds)
+                .get();
+            database.interactions = interactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } else {
+            database.interactions = [];
+        }
         
         updateSyncStatus('Synced');
     } catch (error) {
@@ -2301,7 +2320,6 @@ async function refreshDataForState() {
         updateSyncStatus('Error');
     }
 }
-
 async function saveData() {
     if (isDemoMode) {
         localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
