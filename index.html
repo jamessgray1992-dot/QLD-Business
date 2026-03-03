@@ -1238,7 +1238,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
         console.error("Auth persistence error:", error);
     });
 
-// Auth state listener
+// Auth state listener - FIXED
 auth.onAuthStateChanged((user) => {
     if (user) {
         console.log("Auth state: User signed in", user.email);
@@ -1248,6 +1248,7 @@ auth.onAuthStateChanged((user) => {
     } else {
         console.log("Auth state: No user signed in");
         currentUser = null;
+        // Show auth modal, hide others
         document.getElementById('authModal').classList.remove('hidden');
         document.getElementById('mainApp').classList.add('hidden');
         document.getElementById('stateSelectorModal').classList.add('hidden');
@@ -1888,6 +1889,7 @@ function renderWatermarkForItem(item, action) {
 
 function renderStateSelector() {
     const grid = document.getElementById('stateSelectorGrid');
+    if (!grid) return;
     
     grid.innerHTML = Object.values(australianStates).map(state => `
         <div class="state-card ${state.code.toLowerCase()} bg-white rounded-xl p-6 shadow-sm" onclick="selectState('${state.code}')">
@@ -1902,6 +1904,21 @@ function renderStateSelector() {
             </div>
             <h3 class="font-bold text-gray-900 text-lg mb-1">${state.name}</h3>
             <p class="text-sm text-gray-500">Pop: ${formatPopulation(state.population)}</p>
+        </div>
+    `).join('');
+}
+
+function renderStateDropdown() {
+    const container = document.getElementById('stateDropdownItems');
+    if (!container) return;
+    
+    container.innerHTML = Object.values(australianStates).map(state => `
+        <div class="state-dropdown-item" onclick="switchState('${state.code}')">
+            <div class="state-flag" style="background-color: ${state.color};">${state.code}</div>
+            <div>
+                <div class="font-medium text-gray-900">${state.name}</div>
+                <div class="text-xs text-gray-500">${state.lgaCount} LGAs</div>
+            </div>
         </div>
     `).join('');
 }
@@ -1941,6 +1958,15 @@ function updateStateUI() {
     
     // Update zone filters
     renderZoneFilters();
+    
+    // Render state dropdown
+    renderStateDropdown();
+}
+
+function formatPopulation(pop) {
+    if (pop >= 1000000) return (pop / 1000000).toFixed(2) + 'M';
+    if (pop >= 1000) return (pop / 1000).toFixed(0) + 'K';
+    return pop.toString();
 }
 
 function adjustColor(color, amount) {
@@ -1969,20 +1995,6 @@ function renderZoneFilters() {
         firstBtn.style.backgroundColor = state.color;
         firstBtn.style.color = 'white';
     }
-}
-
-function renderStateDropdown() {
-    const container = document.getElementById('stateDropdownItems');
-    
-    container.innerHTML = Object.values(australianStates).map(state => `
-        <div class="state-dropdown-item" onclick="switchState('${state.code}')">
-            <div class="state-flag" style="background-color: ${state.color};">${state.code}</div>
-            <div>
-                <div class="font-medium text-gray-900">${state.name}</div>
-                <div class="text-xs text-gray-500">${state.lgaCount} LGAs</div>
-            </div>
-        </div>
-    `).join('');
 }
 
 function switchState(stateCode) {
@@ -2014,6 +2026,7 @@ function switchState(stateCode) {
     
     showToast(`Switched to ${australianStates[stateCode].name}`, 'success');
 }
+
 // ==================== UTILITY FUNCTIONS ====================
 
 function parseCurrency(value) {
@@ -2250,6 +2263,7 @@ async function initializeDatabase() {
         updateSyncStatus('Error');
     }
 }
+
 async function refreshDataForState() {
     if (isDemoMode) {
         // In demo mode, data is already in localStorage, just filter client-side
@@ -2288,17 +2302,6 @@ async function refreshDataForState() {
     }
 }
 
-// THEN initializeUI() continues...
-
-function initializeUI() {
-    renderRegionTabs();
-    populateRegionFilters();
-    const regions = getCurrentRegions();
-    if (regions.length > 0) {
-        loadRegion(regions[0].id);
-    }
-    updateAllStats();
-}
 async function saveData() {
     if (isDemoMode) {
         localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
@@ -2446,7 +2449,7 @@ function loadRegion(regionId) {
     
     const regions = getCurrentRegions();
     const region = regions.find(r => r.id === regionId);
-const regionTenders = database.tenders.filter(t => t.regionId === regionId && t.state === currentState);
+    const regionTenders = database.tenders.filter(t => t.regionId === regionId && t.state === currentState);
     
     document.getElementById('regionContent').innerHTML = `
         <div class="glass-panel rounded-2xl p-6 mb-6">
