@@ -180,6 +180,7 @@
             border-radius: 3px 3px 0 0;
         }
 
+        .status-potential { background: #fdf4ff; color: #7e22ce; }
         .status-to-price { background: #dbeafe; color: #1e40af; }
         .status-priced { background: #dcfce7; color: #166534; }
         .status-not-pricing { background: #f3f4f6; color: #6b7280; }
@@ -526,6 +527,9 @@
                     <button onclick="switchMainTab('feedback')" id="tab-feedback" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
                         <i class="fas fa-star mr-2 text-yellow-500"></i> Customer Feedback
                     </button>
+                    <button onclick="switchMainTab('qa')" id="tab-qa" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-clipboard-check mr-2 text-teal-600"></i> Quality Assurance
+                    </button>
                 </div>
             </div>
         </div>
@@ -537,7 +541,19 @@
             <div id="content-tenders" class="main-content">
 
                 <!-- Dashboard Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+                    <div class="stat-card rounded-xl p-5 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-gray-600 mb-1">Potential</p>
+                                <h3 class="text-2xl font-bold text-gray-900" id="statPotential">-</h3>
+                            </div>
+                            <div class="p-2 bg-purple-50 rounded-lg">
+                                <i class="fas fa-search-dollar text-purple-600"></i>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="stat-card rounded-xl p-5 shadow-sm">
                         <div class="flex justify-between items-start">
                             <div>
@@ -839,6 +855,69 @@
 
         </div>
 
+            <!-- QA TAB CONTENT -->
+            <div id="content-qa" class="main-content hidden">
+                <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold display-font text-gray-900 mb-2">Quality Assurance</h2>
+                        <p class="text-gray-600">Track checklists, audits, non-conformances and corrective actions.</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="showAddQAModal('checklist')" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors shadow-sm flex items-center">
+                            <i class="fas fa-tasks mr-2"></i> New Checklist
+                        </button>
+                        <button onclick="showAddQAModal('ncr')" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2"></i> Raise NCR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- QA Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-teal-50 rounded-xl p-5 border border-teal-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-teal-600 font-medium">Checklists</p><h3 class="text-3xl font-bold text-teal-900" id="qaChecklists">-</h3></div>
+                            <i class="fas fa-clipboard-list text-teal-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-red-50 rounded-xl p-5 border border-red-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-red-600 font-medium">Open NCRs</p><h3 class="text-3xl font-bold text-red-900" id="qaOpenNCRs">-</h3></div>
+                            <i class="fas fa-exclamation-circle text-red-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-5 border border-green-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-green-600 font-medium">Closed NCRs</p><h3 class="text-3xl font-bold text-green-900" id="qaClosedNCRs">-</h3></div>
+                            <i class="fas fa-check-double text-green-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-5 border border-orange-100">
+                        <div class="flex items-center justify-between">
+                            <div><p class="text-sm text-orange-600 font-medium">Overdue</p><h3 class="text-3xl font-bold text-orange-900" id="qaOverdue">-</h3></div>
+                            <i class="fas fa-clock text-orange-400 text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QA Sub-tabs -->
+                <div class="flex border-b border-gray-200 mb-6 gap-1">
+                    <button onclick="switchQATab('checklists')" id="qa-tab-checklists" class="qa-sub-tab px-5 py-2.5 text-sm font-medium rounded-t-lg text-gray-600 hover:text-teal-700 border-b-2 border-transparent transition-all">
+                        <i class="fas fa-clipboard-list mr-1"></i> Checklists
+                    </button>
+                    <button onclick="switchQATab('ncr')" id="qa-tab-ncr" class="qa-sub-tab px-5 py-2.5 text-sm font-medium rounded-t-lg text-gray-600 hover:text-red-700 border-b-2 border-transparent transition-all">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> NCRs
+                    </button>
+                    <button onclick="switchQATab('audits')" id="qa-tab-audits" class="qa-sub-tab px-5 py-2.5 text-sm font-medium rounded-t-lg text-gray-600 hover:text-blue-700 border-b-2 border-transparent transition-all">
+                        <i class="fas fa-search mr-1"></i> Audits
+                    </button>
+                </div>
+
+                <div id="qa-content-checklists" class="qa-sub-content"></div>
+                <div id="qa-content-ncr" class="qa-sub-content hidden"></div>
+                <div id="qa-content-audits" class="qa-sub-content hidden"></div>
+            </div>
+
         <!-- Feedback Modal -->
         <div id="feedbackModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -950,6 +1029,7 @@
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
                             <select id="tenderStatus" required onchange="togglePricingFields()" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none bg-white">
+                                <option value="POTENTIAL_UNCONFIRMED">POTENTIAL UNCONFIRMED</option>
                                 <option value="TO_PRICE">TO PRICE</option>
                                 <option value="PRICED">PRICED</option>
                                 <option value="NOT_PRICING">NOT PRICING</option>
@@ -960,7 +1040,7 @@
 
                         <div class="col-span-2 md:col-span-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Value ($)</label>
-                            <input type="text" id="tenderValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
+                            <input type="text" id="tenderValue" placeholder="e.g. $500,000.00" onblur="autoFormatCurrency(this)" oninput="this.value=this.value.replace(/[^0-9$.,]/g,'')" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
                         </div>
 
                         <div class="col-span-2 md:col-span-1">
@@ -975,7 +1055,7 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
-                                    <input type="text" id="ourPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
+                                    <input type="text" id="ourPrice" placeholder="e.g. $450,000.00" onblur="autoFormatCurrency(this)" oninput="this.value=this.value.replace(/[^0-9$.,]/g,'')" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
                                 </div>
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Submission Date</label>
@@ -1019,7 +1099,7 @@
                                 </div>
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Contract Value ($)</label>
-                                    <input type="text" id="awardedValue" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
+                                    <input type="text" id="awardedValue" placeholder="e.g. $480,000.00" onblur="autoFormatCurrency(this)" oninput="this.value=this.value.replace(/[^0-9$.,]/g,'')" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
                                 </div>
                                 <div class="col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Scope Summary</label>
@@ -1039,11 +1119,11 @@
                                 </div>
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Their Price ($) (if known)</label>
-                                    <input type="text" id="winnerPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
+                                    <input type="text" id="winnerPrice" placeholder="e.g. $430,000.00" onblur="autoFormatCurrency(this)" oninput="this.value=this.value.replace(/[^0-9$.,]/g,'')" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
                                 </div>
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Our Price ($)</label>
-                                    <input type="text" id="ourLosingPrice" placeholder="$0.00" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
+                                    <input type="text" id="ourLosingPrice" placeholder="e.g. $450,000.00" onblur="autoFormatCurrency(this)" oninput="this.value=this.value.replace(/[^0-9$.,]/g,'')" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
                                 </div>
                                 <div class="col-span-2 md:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Date Announced</label>
@@ -1139,12 +1219,20 @@
                             </select>
                         </div>
 
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                            <select id="crmRegion" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-white">
-                                <option value="">Select Region...</option>
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1" id="regionHelp">Required for Council contacts</p>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Region / LGA(s)</label>
+                            <div class="relative">
+                                <div id="crmRegionPills" class="min-h-[42px] w-full rounded-lg px-3 py-2 border-2 border-gray-200 focus-within:border-blue-500 bg-white flex flex-wrap gap-1.5 cursor-text" onclick="document.getElementById('crmRegionSearch').focus()">
+                                    <input type="text" id="crmRegionSearch" placeholder="Search and select regions..." 
+                                           class="border-none outline-none text-sm flex-1 min-w-[120px] py-0.5 bg-transparent"
+                                           oninput="filterCrmRegionDropdown()" onfocus="showCrmRegionDropdown()" onblur="hideCrmRegionDropdown()">
+                                </div>
+                                <div id="crmRegionDropdown" class="absolute z-50 w-full bg-white border-2 border-gray-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto hidden">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+                            <input type="hidden" id="crmRegion" value="">
+                            <p class="text-xs text-gray-500 mt-1" id="regionHelp">Select one or more regions. Required for Council contacts.</p>
                         </div>
 
                         <div class="col-span-2 md:col-span-1">
@@ -1321,16 +1409,29 @@
                     </button>
                 </div>
 
-                <div class="p-6">
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-900 mb-2">User Management</h4>
-                        <p class="text-sm text-gray-500">Manage approved users</p>
+                <div class="p-6 space-y-8">
+                    <!-- Approved Users -->
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-1 flex items-center"><i class="fas fa-users mr-2 text-blue-500"></i> Approved Users</h4>
+                        <p class="text-sm text-gray-500 mb-3">Manage who can access the system</p>
+                        <div id="approvedUsersList" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400"><p>Loading users...</p></div>
+                        </div>
                     </div>
 
-                    <div id="approvedUsersList" class="space-y-2">
-                        <div class="text-center py-4 text-gray-400">
-                            <p>Loading users...</p>
+                    <!-- Tab Access Permissions -->
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-1 flex items-center"><i class="fas fa-lock mr-2 text-red-500"></i> Tab Access Control</h4>
+                        <p class="text-sm text-gray-500 mb-3">Restrict which tabs users can see. QA is always accessible to everyone. Admins always have full access.</p>
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+                            <i class="fas fa-info-circle mr-1"></i> Leave a user with no restrictions to grant full access. Check tabs to <strong>restrict</strong> (hide) them from that user.
                         </div>
+                        <div id="tabPermissionsList" class="space-y-3">
+                            <div class="text-center py-4 text-gray-400"><p>Loading...</p></div>
+                        </div>
+                        <button onclick="loadTabPermissions()" class="mt-3 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors">
+                            <i class="fas fa-sync mr-1"></i> Refresh Permissions
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1358,7 +1459,9 @@ let currentState = 'QLD';
 let database = {
     tenders: [],
     crmContacts: [],
-    interactions: []
+    interactions: [],
+    customerFeedback: [],
+    qaItems: []
 };
 
 // Firebase Config
@@ -2181,11 +2284,34 @@ function switchState(stateCode) {
 // ==================== UTILITY FUNCTIONS ====================
 
 function parseCurrency(value) {
-    if (!value || typeof value !== 'string') return 0;
-    const cleaned = value.replace(/[^0-9.]/g, '');
+    if (!value) return 0;
+    const str = typeof value === 'number' ? String(value) : value;
+    const cleaned = str.replace(/[^0-9.]/g, '');
     if (!cleaned || cleaned === '.') return 0;
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
+}
+
+// Format a raw number as $000,000.00 for display in input fields
+function formatCurrencyInput(value) {
+    const num = parseCurrency(String(value));
+    if (num === 0) return '';
+    return '$' + num.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Auto-format a currency input field on blur
+function autoFormatCurrency(input) {
+    const raw = parseCurrency(input.value);
+    if (raw > 0) {
+        input.value = '$' + raw.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else if (input.value.trim() !== '') {
+        input.value = '';
+    }
+}
+
+// Strip to raw number string for storage (keeps $ and commas for parseCurrency compatibility)
+function getRawCurrencyValue(inputId) {
+    return document.getElementById(inputId)?.value || '';
 }
 
 function sumValues(tenders) {
@@ -2270,6 +2396,7 @@ function signIn() {
                 
                 await initializeDatabase();
                 await checkAdminStatus();
+                await applyTabPermissions();
                 
                 showToast('Welcome back!', 'success');
                 
@@ -2319,6 +2446,7 @@ async function checkUserApproval(user) {
         
         await initializeDatabase();
         await checkAdminStatus();
+        await applyTabPermissions();
         
     } catch (error) {
         console.error("Error checking approval:", error);
@@ -2420,6 +2548,11 @@ async function initializeDatabase() {
             .where('state', '==', currentState)
             .get();
         database.customerFeedback = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const qaSnapshot = await db.collection('qaItems')
+            .where('state', '==', currentState)
+            .get();
+        database.qaItems = qaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         updateSyncStatus('Synced');
     } catch (error) {
@@ -2468,6 +2601,11 @@ async function refreshDataForState() {
             .where('state', '==', currentState)
             .get();
         database.customerFeedback = feedbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const qaSnapshot = await db.collection('qaItems')
+            .where('state', '==', currentState)
+            .get();
+        database.qaItems = qaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         updateSyncStatus('Synced');
     } catch (error) {
@@ -2536,7 +2674,9 @@ function renderRegionTabs() {
 }
 
 function populateRegionFilters() {
-    const regionSelects = ['crmRegion', 'crmRegionFilter', 'tenderRegion'];
+    const regionSelects = ['crmRegionFilter', 'tenderRegion'];
+    // crmRegion is now a multi-select pill widget - populated separately
+    populateCrmRegionDropdown();
     const regions = getCurrentRegions();
     
     regionSelects.forEach(selectId => {
@@ -2602,6 +2742,8 @@ function switchMainTab(tab) {
     } else if (tab === 'feedback') {
         populateFbRegionFilter();
         renderFeedback();
+    } else if (tab === 'qa') {
+        renderQA();
     }
 }
 
@@ -2656,6 +2798,7 @@ function loadRegion(regionId) {
 
 function renderTenderCard(tender) {
     const statusColors = {
+        'POTENTIAL_UNCONFIRMED': 'status-potential',
         'TO_PRICE': 'status-to-price',
         'PRICED': 'status-priced',
         'NOT_PRICING': 'status-not-pricing',
@@ -2672,7 +2815,7 @@ function renderTenderCard(tender) {
         ${watermark}
         <div class="flex justify-between items-start mb-3 pr-10">
             <span class="text-xs font-semibold px-2 py-1 rounded ${statusColors[tender.status] || 'bg-gray-100'}">
-                ${tender.status.replace('_', ' ')}
+                ${tender.status.replaceAll('_', ' ')}
             </span>
             <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onclick="event.stopPropagation(); editTender(${tender.id})" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
@@ -2719,7 +2862,7 @@ function editTender(id) {
     document.getElementById('tenderTitle').value = tender.title;
     document.getElementById('tenderCategory').value = tender.category;
     document.getElementById('tenderStatus').value = tender.status;
-    document.getElementById('tenderValue').value = tender.value || '';
+    document.getElementById('tenderValue').value = tender.value ? formatCurrencyInput(parseCurrency(tender.value)) : '';
     document.getElementById('tenderClosingDate').value = tender.closingDate || '';
     document.getElementById('tenderDescription').value = tender.description || '';
     document.getElementById('tenderContactName').value = tender.contact?.name || '';
@@ -2730,19 +2873,19 @@ function editTender(id) {
     togglePricingFields();
     
     if (tender.status === 'PRICED') {
-        document.getElementById('ourPrice').value = tender.ourPrice || '';
+        document.getElementById('ourPrice').value = tender.ourPrice ? formatCurrencyInput(parseCurrency(tender.ourPrice)) : '';
         document.getElementById('submissionDate').value = tender.submissionDate || '';
     } else if (tender.status === 'NOT_PRICING') {
         document.getElementById('notPricingReason').value = tender.notPricingReason || '';
         document.getElementById('notPricingComments').value = tender.notPricingComments || '';
     } else if (tender.status === 'AWARDED') {
         document.getElementById('awardedDate').value = tender.awardedDate || '';
-        document.getElementById('awardedValue').value = tender.awardedValue || '';
+        document.getElementById('awardedValue').value = tender.awardedValue ? formatCurrencyInput(parseCurrency(tender.awardedValue)) : '';
         document.getElementById('awardedScope').value = tender.awardedScope || '';
     } else if (tender.status === 'NOT_WON') {
         document.getElementById('winnerName').value = tender.winnerName || '';
-        document.getElementById('winnerPrice').value = tender.winnerPrice || '';
-        document.getElementById('ourLosingPrice').value = tender.ourLosingPrice || '';
+        document.getElementById('winnerPrice').value = tender.winnerPrice ? formatCurrencyInput(parseCurrency(tender.winnerPrice)) : '';
+        document.getElementById('ourLosingPrice').value = tender.ourLosingPrice ? formatCurrencyInput(parseCurrency(tender.ourLosingPrice)) : '';
         document.getElementById('resultDate').value = tender.resultDate || '';
         document.getElementById('notWonComments').value = tender.notWonComments || '';
     }
@@ -2863,6 +3006,7 @@ function togglePricingFields() {
     } else if (status === 'NOT_WON') {
         document.getElementById('notWonFields').classList.remove('hidden');
     }
+    // POTENTIAL_UNCONFIRMED: no extra fields needed
 }
 
 function closeTenderModal() {
@@ -2944,18 +3088,111 @@ async function saveTender(event) {
 
 function handleCategoryChange() {
     const category = document.getElementById('crmCategory').value;
-    const regionField = document.getElementById('crmRegion');
     const regionHelp = document.getElementById('regionHelp');
-    
     if (category === 'Council') {
-        regionField.required = true;
-        regionHelp.textContent = 'Required for Council contacts';
+        regionHelp.textContent = 'At least one region required for Council contacts';
         regionHelp.classList.add('text-red-500');
     } else {
-        regionField.required = false;
-        regionHelp.textContent = 'Optional for non-Council contacts';
+        regionHelp.textContent = 'Select one or more regions. Optional for non-Council contacts.';
         regionHelp.classList.remove('text-red-500');
     }
+}
+
+// Multi-LGA region picker state
+let crmSelectedRegions = []; // array of { id, name }
+
+function populateCrmRegionDropdown() {
+    const regions = getCurrentRegions();
+    renderCrmRegionDropdown(regions);
+}
+
+function renderCrmRegionDropdown(regions) {
+    const dropdown = document.getElementById('crmRegionDropdown');
+    if (!dropdown) return;
+    if (regions.length === 0) {
+        dropdown.innerHTML = '<div class="px-4 py-2 text-sm text-gray-400">No regions found</div>';
+        return;
+    }
+    dropdown.innerHTML = regions.map(r => {
+        const selected = crmSelectedRegions.some(s => s.id === r.id);
+        return `<div class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between hover:bg-blue-50 ${selected ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-800'}"
+                     onmousedown="event.preventDefault(); toggleCrmRegion('${r.id}', '${r.name.replace(/'/g, "\'")}')">
+            <span>${r.name}</span>
+            ${selected ? '<i class="fas fa-check text-blue-600 text-xs"></i>' : ''}
+        </div>`;
+    }).join('');
+}
+
+function filterCrmRegionDropdown() {
+    const query = document.getElementById('crmRegionSearch').value.toLowerCase();
+    const regions = getCurrentRegions().filter(r => r.name.toLowerCase().includes(query));
+    renderCrmRegionDropdown(regions);
+    showCrmRegionDropdown();
+}
+
+function showCrmRegionDropdown() {
+    const dropdown = document.getElementById('crmRegionDropdown');
+    if (dropdown) dropdown.classList.remove('hidden');
+    filterCrmRegionDropdown();
+}
+
+function hideCrmRegionDropdown() {
+    setTimeout(() => {
+        const dropdown = document.getElementById('crmRegionDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+    }, 150);
+}
+
+function toggleCrmRegion(id, name) {
+    const idx = crmSelectedRegions.findIndex(r => r.id === id);
+    if (idx === -1) {
+        crmSelectedRegions.push({ id, name });
+    } else {
+        crmSelectedRegions.splice(idx, 1);
+    }
+    renderCrmRegionPills();
+    filterCrmRegionDropdown();
+    // Update hidden field with primary regionId (first selected, for backwards compat)
+    document.getElementById('crmRegion').value = crmSelectedRegions[0]?.id || '';
+}
+
+function removeCrmRegion(id) {
+    crmSelectedRegions = crmSelectedRegions.filter(r => r.id !== id);
+    renderCrmRegionPills();
+    document.getElementById('crmRegion').value = crmSelectedRegions[0]?.id || '';
+}
+
+function renderCrmRegionPills() {
+    const container = document.getElementById('crmRegionPills');
+    if (!container) return;
+    // Remove existing pills (keep the input)
+    const input = document.getElementById('crmRegionSearch');
+    container.innerHTML = '';
+    crmSelectedRegions.forEach(r => {
+        const pill = document.createElement('span');
+        pill.className = 'inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full';
+        pill.innerHTML = `${r.name} <button type="button" onclick="removeCrmRegion('${r.id}')" class="ml-0.5 hover:text-red-600 font-bold leading-none">&times;</button>`;
+        container.appendChild(pill);
+    });
+    container.appendChild(input);
+    if (crmSelectedRegions.length === 0) {
+        input.placeholder = 'Search and select regions...';
+    } else {
+        input.placeholder = '';
+    }
+}
+
+function setCrmRegionsFromData(regionId, regionIds) {
+    // Support both old single regionId and new array regionIds
+    crmSelectedRegions = [];
+    const regions = getCurrentRegions();
+    const ids = regionIds && regionIds.length > 0 ? regionIds : (regionId ? [regionId] : []);
+    ids.forEach(id => {
+        const region = regions.find(r => r.id === id);
+        if (region) crmSelectedRegions.push({ id: region.id, name: region.name });
+    });
+    renderCrmRegionPills();
+    document.getElementById('crmRegion').value = crmSelectedRegions[0]?.id || '';
 }
 
 function renderCRMContacts() {
@@ -2985,7 +3222,7 @@ function renderCRMContacts() {
     }
     
     if (regionFilter !== 'all') {
-        contacts = contacts.filter(c => c.regionId === regionFilter);
+        contacts = contacts.filter(c => c.regionId === regionFilter || (c.regionIds && c.regionIds.includes(regionFilter)));
     }
     
     const categories = ['Council', 'Supplier', 'Contractor', 'Competitor'];
@@ -3055,7 +3292,16 @@ function renderContactCard(contact, categoryConfig) {
                 <div>
                     <h4 class="font-bold text-gray-900 text-lg">${contact.name}</h4>
                     <p class="text-${categoryConfig.color}-600 font-medium text-sm">${contact.position}</p>
-                    <p class="text-sm text-gray-500">${contact.department || region?.name || 'No organization'}</p>
+                    <p class="text-sm text-gray-500">${contact.department || ''}</p>
+                    ${(() => {
+                        const regions = getCurrentRegions();
+                        const regionList = (contact.regionIds && contact.regionIds.length > 0)
+                            ? contact.regionIds.map(id => regions.find(r => r.id === id)?.name).filter(Boolean)
+                            : (contact.regionId ? [regions.find(r => r.id === contact.regionId)?.name].filter(Boolean) : []);
+                        return regionList.length > 0
+                            ? `<div class="flex flex-wrap gap-1 mt-1">${regionList.map(n => `<span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">${n}</span>`).join('')}</div>`
+                            : '';
+                    })()}
                     <div class="flex gap-2 mt-1">
                         <span class="category-badge category-${contact.category.toLowerCase()}">
                             <i class="fas ${categoryConfig.icon} mr-1"></i> ${contact.category}
@@ -3120,9 +3366,10 @@ function showAddCRMModal() {
     document.getElementById('crmModalTitle').textContent = 'Add CRM Contact';
     document.getElementById('crmContactId').value = '';
     document.getElementById('crmForm').reset();
-    
+    crmSelectedRegions = [];
+    renderCrmRegionPills();
+    populateCrmRegionDropdown();
     handleCategoryChange();
-    
     document.getElementById('crmModal').classList.remove('hidden');
 }
 
@@ -3133,7 +3380,7 @@ function editCRMContact(id) {
     document.getElementById('crmModalTitle').textContent = 'Edit CRM Contact';
     document.getElementById('crmContactId').value = id;
     document.getElementById('crmCategory').value = contact.category || 'Council';
-    document.getElementById('crmRegion').value = contact.regionId || '';
+    setCrmRegionsFromData(contact.regionId, contact.regionIds);
     document.getElementById('crmType').value = contact.type;
     document.getElementById('crmName').value = contact.name;
     document.getElementById('crmPosition').value = contact.position;
@@ -3149,6 +3396,7 @@ function editCRMContact(id) {
     document.getElementById('crmFollowUpDate').value = contact.followUpDate || '';
     document.getElementById('crmPriority').value = contact.priority || 'Medium';
 
+    populateCrmRegionDropdown();
     handleCategoryChange();
     document.getElementById('crmModal').classList.remove('hidden');
 }
@@ -3217,15 +3465,17 @@ async function saveCRM(event) {
     const id = document.getElementById('crmContactId').value;
     const category = document.getElementById('crmCategory').value;
 
-    if (category === 'Council' && !document.getElementById('crmRegion').value) {
-        showToast('Please select a region for Council contacts', 'error');
+    if (category === 'Council' && crmSelectedRegions.length === 0) {
+        showToast('Please select at least one region for Council contacts', 'error');
         return;
     }
 
     const contactData = {
         state: currentState,
         category: category,
-        regionId: document.getElementById('crmRegion').value,
+        regionId: crmSelectedRegions[0]?.id || document.getElementById('crmRegion').value || '',
+        regionIds: crmSelectedRegions.map(r => r.id),
+        regionNames: crmSelectedRegions.map(r => r.name),
         type: document.getElementById('crmType').value,
         name: document.getElementById('crmName').value,
         position: document.getElementById('crmPosition').value,
@@ -3395,12 +3645,14 @@ function updateAllStats() {
     // STRICT filtering by current state
     const stateTenders = database.tenders.filter(t => t.state === currentState);
     
+    const potential = stateTenders.filter(t => t.status === 'POTENTIAL_UNCONFIRMED').length;
     const toPrice = stateTenders.filter(t => t.status === 'TO_PRICE').length;
     const priced = stateTenders.filter(t => t.status === 'PRICED').length;
     const notPricing = stateTenders.filter(t => t.status === 'NOT_PRICING').length;
     const awarded = stateTenders.filter(t => t.status === 'AWARDED').length;
     const notWon = stateTenders.filter(t => t.status === 'NOT_WON').length;
 
+    document.getElementById('statPotential').textContent = potential;
     document.getElementById('statToPrice').textContent = toPrice;
     document.getElementById('statPriced').textContent = priced;
     document.getElementById('statNotPricing').textContent = notPricing;
@@ -3584,6 +3836,7 @@ async function showAdminPanel() {
 
         document.getElementById('adminPanel').classList.remove('hidden');
         await loadApprovedUsers();
+        await loadTabPermissions();
         
     } catch (error) {
         console.error("Error opening admin panel:", error);
@@ -3951,6 +4204,356 @@ function renderFeedbackCard(entry) {
             </div>
         </div>
     </div>`;
+}
+
+
+
+// ==================== QA FUNCTIONS ====================
+
+let currentQATab = 'checklists';
+
+function switchQATab(tab) {
+    currentQATab = tab;
+    document.querySelectorAll('.qa-sub-tab').forEach(t => {
+        t.classList.remove('border-teal-600', 'text-teal-700', 'border-red-600', 'text-red-700', 'border-blue-600', 'text-blue-700');
+        t.classList.add('border-transparent', 'text-gray-600');
+    });
+    const colors = { checklists: ['border-teal-600','text-teal-700'], ncr: ['border-red-600','text-red-700'], audits: ['border-blue-600','text-blue-700'] };
+    const active = document.getElementById('qa-tab-' + tab);
+    if (active) { active.classList.remove('border-transparent','text-gray-600'); active.classList.add(...colors[tab]); }
+    document.querySelectorAll('.qa-sub-content').forEach(c => c.classList.add('hidden'));
+    const el = document.getElementById('qa-content-' + tab);
+    if (el) el.classList.remove('hidden');
+    renderQASubTab(tab);
+}
+
+function renderQA() {
+    updateQAStats();
+    switchQATab('checklists');
+}
+
+function updateQAStats() {
+    const items = database.qaItems || [];
+    const stateItems = items.filter(i => i.state === currentState);
+    const checklists = stateItems.filter(i => i.type === 'checklist').length;
+    const openNCRs = stateItems.filter(i => i.type === 'ncr' && i.status !== 'Closed').length;
+    const closedNCRs = stateItems.filter(i => i.type === 'ncr' && i.status === 'Closed').length;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const overdue = stateItems.filter(i => i.dueDate && new Date(i.dueDate) < today && i.status !== 'Closed' && i.status !== 'Complete').length;
+    const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+    el('qaChecklists', checklists); el('qaOpenNCRs', openNCRs); el('qaClosedNCRs', closedNCRs); el('qaOverdue', overdue);
+}
+
+function renderQASubTab(tab) {
+    const container = document.getElementById('qa-content-' + tab);
+    if (!container) return;
+    const items = (database.qaItems || []).filter(i => i.state === currentState && i.type === tab.replace('checklists','checklist').replace('ncr','ncr').replace('audits','audit'));
+
+    if (items.length === 0) {
+        const labels = { checklists: 'checklist', ncr: 'NCR', audits: 'audit' };
+        container.innerHTML = `<div class="text-center py-16 text-gray-400">
+            <i class="fas fa-clipboard text-4xl mb-4"></i>
+            <p class="text-lg">No ${labels[tab]}s found</p>
+            <button onclick="showAddQAModal('${tab.replace('checklists','checklist').replace('audits','audit')}')" class="mt-4 px-6 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700">Add First Entry</button>
+        </div>`;
+        return;
+    }
+
+    const sorted = [...items].sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+    const statusColors = {
+        'Open': 'bg-red-100 text-red-700', 'In Progress': 'bg-orange-100 text-orange-700',
+        'Closed': 'bg-green-100 text-green-700', 'Complete': 'bg-green-100 text-green-700',
+        'Pending Review': 'bg-blue-100 text-blue-700', 'Draft': 'bg-gray-100 text-gray-600'
+    };
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    container.innerHTML = sorted.map(item => {
+        const isOverdue = item.dueDate && new Date(item.dueDate) < today && item.status !== 'Closed' && item.status !== 'Complete';
+        const statusClass = statusColors[item.status] || 'bg-gray-100 text-gray-600';
+        const regions = getCurrentRegions();
+        const region = regions.find(r => r.id === item.regionId);
+        return `
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200 mb-4 ${isOverdue ? 'border-l-4 border-l-red-500' : ''}">
+            <div class="flex justify-between items-start gap-4">
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass}">${item.status}</span>
+                        ${item.severity ? `<span class="px-2.5 py-1 rounded-full text-xs font-semibold ${item.severity === 'Critical' ? 'bg-red-200 text-red-900' : item.severity === 'Major' ? 'bg-orange-100 text-orange-800' : 'bg-yellow-50 text-yellow-800'}">${item.severity}</span>` : ''}
+                        ${isOverdue ? '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700"><i class="fas fa-clock mr-1"></i>Overdue</span>' : ''}
+                    </div>
+                    <h4 class="font-bold text-gray-900 text-base mb-1">${item.title}</h4>
+                    ${item.description ? `<p class="text-sm text-gray-600 mb-2">${item.description}</p>` : ''}
+                    <div class="flex flex-wrap gap-3 text-xs text-gray-400">
+                        ${region ? `<span><i class="fas fa-map-marker-alt mr-1"></i>${region.name}</span>` : ''}
+                        ${item.assignedTo ? `<span><i class="fas fa-user mr-1"></i>${item.assignedTo}</span>` : ''}
+                        ${item.dueDate ? `<span><i class="fas fa-calendar mr-1"></i>Due: ${formatDate(item.dueDate)}</span>` : ''}
+                        ${item.projectRef ? `<span><i class="fas fa-hashtag mr-1"></i>${item.projectRef}</span>` : ''}
+                        <span class="text-gray-300">Created: ${formatDate(item.createdAt)}</span>
+                    </div>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                    <button onclick="editQAItem(${item.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit"><i class="fas fa-edit text-sm"></i></button>
+                    <button onclick="deleteQAItem(${item.id})" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Delete"><i class="fas fa-trash-alt text-sm"></i></button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function showAddQAModal(type, editId) {
+    const title = type === 'checklist' ? 'New Checklist' : type === 'ncr' ? 'Raise NCR' : 'New Audit';
+    const existing = editId ? (database.qaItems||[]).find(i => i.id === editId) : null;
+
+    const regions = getCurrentRegions();
+    const regionOptions = '<option value="">Select region...</option>' + regions.map(r => `<option value="${r.id}" ${existing?.regionId === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
+    
+    const ncrFields = (type === 'ncr') ? `
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+            <select id="qaItemSeverity" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none bg-white">
+                <option value="Minor" ${existing?.severity === 'Minor' ? 'selected' : ''}>Minor</option>
+                <option value="Major" ${existing?.severity === 'Major' ? 'selected' : ''}>Major</option>
+                <option value="Critical" ${existing?.severity === 'Critical' ? 'selected' : ''}>Critical</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Root Cause</label>
+            <input type="text" id="qaItemRootCause" value="${existing?.rootCause || ''}" placeholder="Identified root cause..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Corrective Action</label>
+            <textarea id="qaItemCorrective" rows="2" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none resize-none">${existing?.correctiveAction || ''}</textarea>
+        </div>` : '';
+
+    const statusOptions = type === 'ncr' 
+        ? ['Open','In Progress','Pending Review','Closed']
+        : type === 'audit'
+        ? ['Draft','In Progress','Complete']
+        : ['Draft','In Progress','Complete'];
+
+    const modal = document.createElement('div');
+    modal.id = 'qaModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                <h3 class="text-xl font-bold display-font">${existing ? 'Edit' : title}</h3>
+                <button onclick="document.getElementById('qaModal').remove()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form onsubmit="saveQAItem(event, '${type}', ${editId || 'null'})" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                        <input type="text" id="qaItemTitle" required value="${existing?.title || ''}" placeholder="Brief title..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Region / LGA</label>
+                        <select id="qaItemRegion" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none bg-white">${regionOptions}</select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Project Reference</label>
+                        <input type="text" id="qaItemProjectRef" value="${existing?.projectRef || ''}" placeholder="e.g. PRJ-2024-001" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="qaItemStatus" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none bg-white">
+                            ${statusOptions.map(s => `<option value="${s}" ${existing?.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                        <input type="text" id="qaItemAssignedTo" value="${existing?.assignedTo || ''}" placeholder="Name or email" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                        <input type="date" id="qaItemDueDate" value="${existing?.dueDate || ''}" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    ${ncrFields}
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description / Notes</label>
+                        <textarea id="qaItemDescription" rows="3" placeholder="Details..." class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-teal-500 focus:outline-none resize-none">${existing?.description || ''}</textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-2 border-t">
+                    <button type="button" onclick="document.getElementById('qaModal').remove()" class="px-6 py-2 border-2 border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium">Save</button>
+                </div>
+            </form>
+        </div>`;
+    document.body.appendChild(modal);
+}
+
+function editQAItem(id) {
+    const item = (database.qaItems||[]).find(i => i.id === id);
+    if (!item) return;
+    showAddQAModal(item.type, id);
+}
+
+async function saveQAItem(event, type, editId) {
+    event.preventDefault();
+    if (!database.qaItems) database.qaItems = [];
+
+    const entry = {
+        type: type,
+        state: currentState,
+        regionId: document.getElementById('qaItemRegion').value,
+        title: document.getElementById('qaItemTitle').value.trim(),
+        description: document.getElementById('qaItemDescription').value.trim(),
+        status: document.getElementById('qaItemStatus').value,
+        assignedTo: document.getElementById('qaItemAssignedTo').value.trim(),
+        dueDate: document.getElementById('qaItemDueDate').value,
+        projectRef: document.getElementById('qaItemProjectRef').value.trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.email || 'demo'
+    };
+    if (type === 'ncr') {
+        entry.severity = document.getElementById('qaItemSeverity')?.value;
+        entry.rootCause = document.getElementById('qaItemRootCause')?.value.trim();
+        entry.correctiveAction = document.getElementById('qaItemCorrective')?.value.trim();
+    }
+
+    if (editId) {
+        const idx = database.qaItems.findIndex(i => i.id == editId);
+        if (idx !== -1) {
+            entry.id = editId;
+            entry.createdAt = database.qaItems[idx].createdAt;
+            entry.createdBy = database.qaItems[idx].createdBy;
+            database.qaItems[idx] = entry;
+        }
+    } else {
+        entry.id = Date.now();
+        entry.createdAt = new Date().toISOString();
+        entry.createdBy = currentUser?.email || 'demo';
+        database.qaItems.push(entry);
+    }
+
+    try {
+        if (!isDemoMode && currentUser && db) {
+            await db.collection('qaItems').doc(String(entry.id)).set(entry);
+        }
+        if (isDemoMode) localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        const modal = document.getElementById('qaModal');
+        if (modal) modal.remove();
+        renderQASubTab(currentQATab);
+        updateQAStats();
+        showToast('QA item saved!', 'success');
+    } catch (err) {
+        showToast('Error saving: ' + err.message, 'error');
+    }
+}
+
+async function deleteQAItem(id) {
+    if (!confirm('Delete this QA item?')) return;
+    database.qaItems = (database.qaItems||[]).filter(i => i.id !== id);
+    try {
+        if (!isDemoMode && currentUser && db) await db.collection('qaItems').doc(String(id)).delete();
+        if (isDemoMode) localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        renderQASubTab(currentQATab);
+        updateQAStats();
+        showToast('Deleted', 'success');
+    } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+// ==================== TAB PERMISSIONS FUNCTIONS ====================
+
+// Tabs that can be restricted (QA is always visible)
+const RESTRICTABLE_TABS = ['tenders', 'crm', 'analytics', 'feedback'];
+
+// Loaded from Firestore: { uid: { email, restrictedTabs: [] } }
+let userPermissionsCache = {};
+
+async function applyTabPermissions() {
+    // Demo mode: full access always
+    if (isDemoMode) return;
+    if (!currentUser) return;
+
+    // Admins always have full access
+    const isAdmin = await checkIfAdmin();
+    if (isAdmin) return;
+
+    try {
+        const doc = await db.collection('userPermissions').doc(currentUser.uid).get();
+        if (!doc.exists) return; // No restrictions = full access
+        const data = doc.data();
+        const restricted = data.restrictedTabs || [];
+        restricted.forEach(tab => {
+            const btn = document.getElementById('tab-' + tab);
+            if (btn) btn.style.display = 'none';
+            // If currently on a restricted tab, redirect to QA
+            if (currentMainTab === tab) {
+                switchMainTab('qa');
+            }
+        });
+    } catch (err) {
+        console.error('Error applying tab permissions:', err);
+    }
+}
+
+async function loadTabPermissions() {
+    const container = document.getElementById('tabPermissionsList');
+    if (!container) return;
+    container.innerHTML = '<p class="text-gray-400 text-sm py-2">Loading...</p>';
+
+    try {
+        const snapshot = await db.collection('approvedUsers').where('approved', '==', true).get();
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-sm py-2">No approved users.</p>';
+            return;
+        }
+
+        // Load existing permissions
+        const permsSnapshot = await db.collection('userPermissions').get();
+        const permsMap = {};
+        permsSnapshot.docs.forEach(d => { permsMap[d.id] = d.data(); });
+
+        container.innerHTML = snapshot.docs.map(doc => {
+            const user = doc.data();
+            const uid = doc.id;
+            const perms = permsMap[uid] || {};
+            const restricted = perms.restrictedTabs || [];
+            const tabLabels = { tenders: 'Tenders', crm: 'CRM', analytics: 'Analytics', feedback: 'Feedback' };
+            const checkboxes = RESTRICTABLE_TABS.map(tab => `
+                <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
+                    <input type="checkbox" class="w-4 h-4 accent-red-500" ${restricted.includes(tab) ? 'checked' : ''} onchange="toggleTabRestriction('${uid}', '${tab}', this.checked)">
+                    <span class="${restricted.includes(tab) ? 'text-red-600 font-medium' : 'text-gray-700'}">${tabLabels[tab]}</span>
+                </label>`).join('');
+            return `
+            <div class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <div class="font-medium text-gray-900 text-sm">${user.email}</div>
+                        <div class="text-xs text-gray-500">${restricted.length === 0 ? 'Full access' : restricted.length + ' tab(s) restricted'}</div>
+                    </div>
+                    ${restricted.length > 0 ? '<span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full font-medium">Restricted</span>' : '<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Full Access</span>'}
+                </div>
+                <div class="flex flex-wrap gap-4">${checkboxes}</div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        container.innerHTML = `<p class="text-red-400 text-sm py-2">Error: ${err.message}</p>`;
+    }
+}
+
+async function toggleTabRestriction(uid, tab, restrict) {
+    try {
+        const docRef = db.collection('userPermissions').doc(uid);
+        const doc = await docRef.get();
+        let restricted = doc.exists ? (doc.data().restrictedTabs || []) : [];
+        if (restrict) {
+            if (!restricted.includes(tab)) restricted.push(tab);
+        } else {
+            restricted = restricted.filter(t => t !== tab);
+        }
+        // Get email for reference
+        const userDoc = await db.collection('approvedUsers').doc(uid).get();
+        await docRef.set({ email: userDoc.data()?.email || '', restrictedTabs: restricted, updatedAt: new Date().toISOString() }, { merge: true });
+        showToast(`Permissions updated`, 'success');
+        // Refresh display
+        await loadTabPermissions();
+    } catch (err) {
+        showToast('Error updating permissions: ' + err.message, 'error');
+    }
 }
 
 
