@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <!-- Firebase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -424,6 +425,45 @@
                 <p class="text-xs text-center text-gray-400 mt-4">
                     Demo mode stores data locally on your device. No account required.
                 </p>
+
+                <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                    <p class="text-xs text-gray-500">Don't have an account?</p>
+                    <button onclick="showRequestAccessModal()" class="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium underline-offset-2 hover:underline transition-colors">
+                        <i class="fas fa-user-plus mr-1"></i> Request Access
+                    </button>
+                </div>
+            </div>
+
+            <!-- Request Access Modal (nested inside auth card) -->
+            <div id="requestAccessModal" class="hidden">
+                <div class="border-t border-gray-100 pt-5 mt-2">
+                    <div class="flex items-center mb-4">
+                        <button onclick="hideRequestAccessModal()" class="text-gray-400 hover:text-gray-600 mr-3"><i class="fas fa-arrow-left"></i></button>
+                        <h3 class="font-bold text-gray-900">Request Account Access</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
+                            <input type="text" id="reqName" placeholder="Your name" class="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Work Email *</label>
+                            <input type="email" id="reqEmail" placeholder="you@company.com" class="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Requested Password *</label>
+                            <input type="password" id="reqPassword" placeholder="Min 8 characters" class="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Reason for Access</label>
+                            <textarea id="reqReason" rows="2" placeholder="Brief reason..." class="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none resize-none"></textarea>
+                        </div>
+                        <button onclick="submitAccessRequest()" class="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
+                            <i class="fas fa-paper-plane mr-2"></i> Submit Request
+                        </button>
+                        <p class="text-xs text-gray-400 text-center">An admin will review your request and contact you by email.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -548,6 +588,17 @@
 
             <!-- TENDERS TAB CONTENT -->
             <div id="content-tenders" class="main-content">
+
+                <!-- Tenders Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold display-font text-gray-900">Tenders &amp; Opportunities</h2>
+                        <p class="text-sm text-gray-500 mt-1">Manage and track all tenders across regions</p>
+                    </div>
+                    <button onclick="showAddTenderModal(null)" id="addTenderBtn" class="flex items-center px-5 py-2.5 text-white rounded-xl font-medium shadow-sm hover:opacity-90 transition-all" style="background-color: #771414;">
+                        <i class="fas fa-plus mr-2"></i> Add Tender
+                    </button>
+                </div>
 
                 <!-- Dashboard Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
@@ -1010,9 +1061,15 @@
 
                 <form id="tenderForm" class="p-6 space-y-4" onsubmit="saveTender(event)">
                     <input type="hidden" id="tenderId">
-                    <input type="hidden" id="tenderRegion">
 
                     <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Region *</label>
+                            <select id="tenderRegion" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none bg-white">
+                                <option value="">— Select a region —</option>
+                            </select>
+                        </div>
+
                         <div class="col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
                             <input type="text" id="tenderTitle" required class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none">
@@ -1480,6 +1537,18 @@
                         <p class="text-sm text-gray-500 mb-3">Manage who can access the system</p>
                         <div id="approvedUsersList" class="space-y-2">
                             <div class="text-center py-4 text-gray-400"><p>Loading users...</p></div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Access Requests -->
+                    <div>
+                        <h4 class="font-semibold text-gray-900 mb-1 flex items-center">
+                            <i class="fas fa-user-clock mr-2 text-amber-500"></i> Pending Access Requests
+                            <span id="pendingRequestsBadge" class="ml-2 hidden px-2 py-0.5 text-xs bg-amber-100 text-amber-800 rounded-full font-semibold"></span>
+                        </h4>
+                        <p class="text-sm text-gray-500 mb-3">Users who have requested access to the system</p>
+                        <div id="pendingRequestsList" class="space-y-2">
+                            <div class="text-center py-4 text-gray-400"><p>Loading requests...</p></div>
                         </div>
                     </div>
 
@@ -2262,6 +2331,10 @@ function updateStateUI() {
     // Update state name
     document.getElementById('currentStateName').textContent = state.name;
     
+    // Update Add Tender button colour to match state
+    const addBtn = document.getElementById('addTenderBtn');
+    if (addBtn) addBtn.style.backgroundColor = state.color;
+
     // Update LGA count
     document.getElementById('lgaCount').textContent = `${state.lgaCount} LGAs`;
     
@@ -2457,6 +2530,10 @@ function signIn() {
                 document.getElementById('stateSelectorModal').classList.remove('hidden');
                 renderStateSelector();
                 renderStateDropdown();
+                initEmailJS();
+                requestNotificationPermission();
+                setTimeout(checkUpcomingDeadlines, 3000); // check after data loads
+                setInterval(checkUpcomingDeadlines, 3600000); // re-check hourly
                 
                 await initializeDatabase();
                 await checkAdminStatus();
@@ -2738,7 +2815,7 @@ function renderRegionTabs() {
 }
 
 function populateRegionFilters() {
-    const regionSelects = ['crmRegionFilter', 'tenderRegion'];
+    const regionSelects = ['crmRegionFilter']; // tenderRegion is now a modal dropdown populated by populateTenderRegionDropdown()
     // crmRegion is now a multi-select pill widget - populated separately
     populateCrmRegionDropdown();
     const regions = getCurrentRegions();
@@ -2837,15 +2914,10 @@ function loadRegion(regionId) {
     
     document.getElementById('regionContent').innerHTML = `
         <div class="glass-panel rounded-2xl p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h2 class="text-2xl font-bold display-font text-gray-900">${region.name}</h2>
-                    <p class="text-sm text-gray-500 mt-1">${regionTenders.length} tenders</p>
-                    ${region.population ? `<p class="text-xs text-gray-400 mt-1">Population: ${formatPopulation(region.population)}</p>` : ''}
-                </div>
-                <button onclick="showAddTenderModal('${regionId}')" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: ${state.color};">
-                    <i class="fas fa-plus mr-2"></i> Add Tender
-                </button>
+            <div class="flex items-center mb-1">
+                <h2 class="text-2xl font-bold display-font text-gray-900">${region.name}</h2>
+                <span class="ml-3 text-sm text-gray-500">${regionTenders.length} tender${regionTenders.length !== 1 ? 's' : ''}</span>
+                ${region.population ? `<span class="ml-3 text-xs text-gray-400">Population: ${formatPopulation(region.population)}</span>` : ''}
             </div>
         </div>
         
@@ -2907,16 +2979,46 @@ function renderTenderCard(tender) {
     `;
 }
 
+function populateTenderRegionDropdown(selectedRegionId) {
+    const select = document.getElementById('tenderRegion');
+    if (!select) return;
+    const regions = getCurrentRegions();
+    const state   = getCurrentStateData();
+    // Group regions by zone
+    const zoneMap = {};
+    regions.forEach(r => {
+        const zone = state.zones && state.zones.find(z => z.id === r.zone);
+        const zoneName = (zone && zone.name) || r.zone || 'Other';
+        if (!zoneMap[zoneName]) zoneMap[zoneName] = [];
+        zoneMap[zoneName].push(r);
+    });
+    select.innerHTML = '<option value="">— Select a region —</option>';
+    Object.keys(zoneMap).forEach(zoneName => {
+        const grp = document.createElement('optgroup');
+        grp.label = zoneName;
+        zoneMap[zoneName].forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = r.name;
+            if (r.id === selectedRegionId) opt.selected = true;
+            grp.appendChild(opt);
+        });
+        select.appendChild(grp);
+    });
+}
+
 function showAddTenderModal(regionId) {
     document.getElementById('tenderModalTitle').textContent = 'Add New Tender';
     document.getElementById('tenderForm').reset();
     document.getElementById('tenderId').value = '';
-    document.getElementById('tenderRegion').value = regionId || currentRegion;
-    
+
     document.getElementById('pricedFields').classList.add('hidden');
     document.getElementById('notPricingFields').classList.add('hidden');
     document.getElementById('awardedFields').classList.add('hidden');
     document.getElementById('notWonFields').classList.add('hidden');
+
+    // Populate region dropdown, pre-selecting passed region or current region
+    populateTenderRegionDropdown(regionId || currentRegion);
 
     // Reset new fields
     document.getElementById('tenderAssignedTo').value = '';
@@ -2936,7 +3038,7 @@ function editTender(id) {
     
     document.getElementById('tenderModalTitle').textContent = 'Edit Tender';
     document.getElementById('tenderId').value = id;
-    document.getElementById('tenderRegion').value = tender.regionId;
+    populateTenderRegionDropdown(tender.regionId);
     document.getElementById('tenderTitle').value = tender.title;
     document.getElementById('tenderCategory').value = tender.category;
     document.getElementById('tenderStatus').value = tender.status;
@@ -4245,6 +4347,7 @@ async function showAdminPanel() {
 
         document.getElementById('adminPanel').classList.remove('hidden');
         await loadApprovedUsers();
+        await loadPendingRequests();
         await loadTabPermissions();
         
     } catch (error) {
@@ -4261,7 +4364,6 @@ async function loadApprovedUsers() {
     try {
         const snapshot = await db.collection('approvedUsers')
             .where('approved', '==', true)
-            .orderBy('approvedAt', 'desc')
             .get();
 
         const container = document.getElementById('approvedUsersList');
@@ -4965,6 +5067,316 @@ async function toggleTabRestriction(uid, tab, restrict) {
     }
 }
 
+
+
+// ==================== REQUEST ACCESS ====================
+
+function showRequestAccessModal() {
+    document.getElementById('authForm').classList.add('hidden');
+    document.getElementById('requestAccessModal').classList.remove('hidden');
+}
+
+function hideRequestAccessModal() {
+    document.getElementById('requestAccessModal').classList.add('hidden');
+    document.getElementById('authForm').classList.remove('hidden');
+}
+
+async function submitAccessRequest() {
+    const name     = (document.getElementById('reqName').value     || '').trim();
+    const email    = (document.getElementById('reqEmail').value    || '').trim();
+    const password = (document.getElementById('reqPassword').value || '').trim();
+    const reason   = (document.getElementById('reqReason').value   || '').trim();
+
+    if (!name)           { showToast('Please enter your name', 'error');  return; }
+    if (!email)          { showToast('Please enter your email', 'error'); return; }
+    if (password.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
+
+    try {
+        // Check for duplicate pending request (single-field query to avoid needing composite index)
+        const existing = await db.collection('accessRequests')
+            .where('email', '==', email)
+            .get();
+        const hasPending = existing.docs.some(d => d.data().status === 'pending');
+        if (hasPending) {
+            showToast('A request for this email is already pending', 'error');
+            return;
+        }
+
+        const requestData = {
+            name, email, password, reason,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        };
+
+        await db.collection('accessRequests').add(requestData);
+
+        // Notify admin via EmailJS
+        sendAdminNotificationEmail(name, email, reason);
+
+        showToast('Request submitted! Admin will review and contact you.', 'success');
+        hideRequestAccessModal();
+        document.getElementById('reqName').value = '';
+        document.getElementById('reqEmail').value = '';
+        document.getElementById('reqPassword').value = '';
+        document.getElementById('reqReason').value = '';
+    } catch(e) {
+        showToast('Error submitting request: ' + e.message, 'error');
+    }
+}
+
+function sendAdminNotificationEmail(requesterName, requesterEmail, reason) {
+    // EmailJS - configure your service/template IDs in the EMAILJS_CONFIG below
+    if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId === 'YOUR_SERVICE_ID') return;
+    emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.adminTemplateId, {
+        to_email:        EMAILJS_CONFIG.adminEmail,
+        requester_name:  requesterName,
+        requester_email: requesterEmail,
+        reason:          reason || 'No reason provided',
+        app_name:        'AUS Business CRM'
+    }).catch(e => console.warn('EmailJS admin notify failed:', e));
+}
+
+async function loadPendingRequests() {
+    const container = document.getElementById('pendingRequestsList');
+    const badge     = document.getElementById('pendingRequestsBadge');
+    if (!container) return;
+    container.innerHTML = '<p class="text-gray-400 text-sm py-2">Loading...</p>';
+    try {
+        const snapshot = await db.collection('accessRequests')
+            .where('status', '==', 'pending')
+            .get();
+        if (snapshot.empty) {
+            container.innerHTML = '<p class="text-gray-400 text-sm py-2">No pending requests.</p>';
+            if (badge) badge.classList.add('hidden');
+            return;
+        }
+        if (badge) { badge.textContent = snapshot.size; badge.classList.remove('hidden'); }
+        container.innerHTML = snapshot.docs.map(doc => {
+            const d = doc.data();
+            const date = d.createdAt ? new Date(d.createdAt).toLocaleDateString('en-AU') : '';
+            return `
+            <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="font-semibold text-gray-900">${d.name}</div>
+                        <div class="text-sm text-gray-600">${d.email}</div>
+                        ${d.reason ? `<div class="text-xs text-gray-500 mt-1 italic">"${d.reason}"</div>` : ''}
+                        <div class="text-xs text-gray-400 mt-1">Requested: ${date}</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="approveAccessRequest('${doc.id}')" class="flex-1 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors">
+                        <i class="fas fa-check mr-1"></i> Approve
+                    </button>
+                    <button onclick="denyAccessRequest('${doc.id}')" class="flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors">
+                        <i class="fas fa-times mr-1"></i> Deny
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        container.innerHTML = `<p class="text-red-400 text-sm py-2">Error: ${e.message}</p>`;
+    }
+}
+
+async function approveAccessRequest(docId) {
+    try {
+        const docRef  = db.collection('accessRequests').doc(docId);
+        const docSnap = await docRef.get();
+        const data    = docSnap.data();
+
+        // Create Firebase Auth user
+        const userCred = await auth.createUserWithEmailAndPassword(data.email, data.password);
+        const uid = userCred.user.uid;
+
+        // Add to approvedUsers
+        await db.collection('approvedUsers').doc(uid).set({
+            email:      data.email,
+            name:       data.name,
+            approved:   true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser?.email || 'admin'
+        });
+
+        // Mark request resolved
+        await docRef.update({ status: 'approved', resolvedAt: new Date().toISOString() });
+
+        // Email the user to let them know
+        if (EMAILJS_CONFIG.serviceId && EMAILJS_CONFIG.serviceId !== 'YOUR_SERVICE_ID') {
+            emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.approvalTemplateId, {
+                to_email:  data.email,
+                user_name: data.name,
+                app_name:  'AUS Business CRM'
+            }).catch(e => console.warn('EmailJS approval notify failed:', e));
+        }
+
+        showToast(data.name + ' approved and account created!', 'success');
+        await loadPendingRequests();
+        await loadApprovedUsers();
+    } catch(e) {
+        showToast('Error approving: ' + e.message, 'error');
+    }
+}
+
+async function denyAccessRequest(docId) {
+    if (!confirm('Deny this access request?')) return;
+    try {
+        await db.collection('accessRequests').doc(docId).update({
+            status: 'denied',
+            resolvedAt: new Date().toISOString(),
+            resolvedBy: currentUser?.email || 'admin'
+        });
+        showToast('Request denied', 'success');
+        await loadPendingRequests();
+    } catch(e) {
+        showToast('Error denying request: ' + e.message, 'error');
+    }
+}
+
+// ==================== NOTIFICATIONS & REMINDERS ====================
+
+// ---- EmailJS & notification config (update these with your own IDs) ----
+const EMAILJS_CONFIG = {
+    publicKey:         'YOUR_EMAILJS_PUBLIC_KEY',   // from emailjs.com → Account → API Keys
+    serviceId:         'YOUR_SERVICE_ID',            // EmailJS → Email Services
+    adminTemplateId:   'YOUR_ADMIN_TEMPLATE_ID',     // template for admin new-request notification
+    approvalTemplateId:'YOUR_APPROVAL_TEMPLATE_ID',  // template for user approval notification
+    reminderTemplateId:'YOUR_REMINDER_TEMPLATE_ID',  // template for day-before action reminder
+    adminEmail:        'admin@yourcompany.com'        // where admin notifications go
+};
+
+function initEmailJS() {
+    if (EMAILJS_CONFIG.publicKey && EMAILJS_CONFIG.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+        emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+    }
+}
+
+// Request notification permission for push alerts
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied')  return false;
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+}
+
+// Register service worker for background push
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW register failed:', e));
+    }
+}
+
+function sendPushNotification(title, body, url) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const notif = new Notification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'action-reminder',
+        requireInteraction: true
+    });
+    if (url) notif.onclick = () => { window.focus(); notif.close(); };
+}
+
+function sendReminderEmail(userEmail, userName, tenderTitle, dueDate, dueType) {
+    if (!EMAILJS_CONFIG.serviceId || EMAILJS_CONFIG.serviceId === 'YOUR_SERVICE_ID') return;
+    emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.reminderTemplateId, {
+        to_email:     userEmail,
+        user_name:    userName || userEmail,
+        tender_title: tenderTitle,
+        due_date:     new Date(dueDate).toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long', year:'numeric' }),
+        due_type:     dueType,
+        app_name:     'AUS Business CRM'
+    }).catch(e => console.warn('Reminder email failed:', e));
+}
+
+// Run the reminder check — called on login and every hour
+function checkUpcomingDeadlines() {
+    if (!currentUser || isDemoMode) return;
+
+    const userEmail = currentUser.email || '';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const myTenders = (database.tenders || []).filter(t =>
+        (t.assignedTo || '').toLowerCase() === userEmail.toLowerCase()
+    );
+
+    const dueTomorrow = [];
+
+    myTenders.forEach(t => {
+        if (t.followUpDate === tomorrowStr) {
+            dueTomorrow.push({ tender: t, dateStr: t.followUpDate, type: 'Follow-up date' });
+        } else if (t.closingDate === tomorrowStr) {
+            dueTomorrow.push({ tender: t, dateStr: t.closingDate, type: 'Closing date' });
+        }
+    });
+
+    if (dueTomorrow.length === 0) return;
+
+    // Check which ones we've already reminded about today (stored in sessionStorage)
+    const remindedKey = 'remindedDeadlines_' + today.toISOString().split('T')[0];
+    let alreadyReminded = [];
+    try { alreadyReminded = JSON.parse(sessionStorage.getItem(remindedKey) || '[]'); } catch(e) {}
+
+    dueTomorrow.forEach(({ tender, dateStr, type }) => {
+        const key = tender.id + '_' + dateStr;
+        if (alreadyReminded.includes(key)) return;
+
+        // Push notification
+        requestNotificationPermission().then(granted => {
+            if (granted) {
+                sendPushNotification(
+                    '⚠️ ' + type + ' Tomorrow',
+                    tender.title + ' is due tomorrow (' + new Date(dateStr).toLocaleDateString('en-AU') + ')',
+                    null
+                );
+            }
+        });
+
+        // Email reminder
+        sendReminderEmail(userEmail, currentUser.displayName || userEmail, tender.title, dateStr, type);
+
+        alreadyReminded.push(key);
+    });
+
+    try { sessionStorage.setItem(remindedKey, JSON.stringify(alreadyReminded)); } catch(e) {}
+
+    // Show in-app banner too
+    showDeadlineBanner(dueTomorrow);
+}
+
+function showDeadlineBanner(items) {
+    const existing = document.getElementById('deadlineBanner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'deadlineBanner';
+    banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full mx-4 bg-amber-50 border-2 border-amber-400 rounded-2xl shadow-2xl p-4';
+    banner.style.animation = 'slideInRight 0.3s ease-out';
+    banner.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-bell text-amber-600"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-amber-900 text-sm mb-1">
+                    ${items.length} Action${items.length > 1 ? 's' : ''} Due Tomorrow
+                </p>
+                ${items.map(({tender, type}) => `
+                    <p class="text-xs text-amber-800 truncate">
+                        <span class="font-medium">${type}:</span> ${tender.title}
+                    </p>`).join('')}
+            </div>
+            <button onclick="document.getElementById('deadlineBanner').remove()" class="text-amber-400 hover:text-amber-600 flex-shrink-0 ml-1">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>`;
+    document.body.appendChild(banner);
+    setTimeout(() => { const b = document.getElementById('deadlineBanner'); if (b) b.remove(); }, 15000);
+}
 
 // ==================== INITIALIZATION ====================
 
