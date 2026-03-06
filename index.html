@@ -77,6 +77,11 @@
             50% { opacity: .5; }
         }
 
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+
         .priority-high { border-left-color: #dc2626; }
         .priority-medium { border-left-color: #f59e0b; }
         .priority-low { border-left-color: #10b981; }
@@ -1216,7 +1221,7 @@
                                  onclick="document.getElementById('tenderFileInput').click()">
                                 <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
                                 <p class="text-sm text-gray-600 font-medium">Drag & drop files here, or click to browse</p>
-                                <p class="text-xs text-gray-400 mt-1">PDF, Word, Excel, images — max 10MB each</p>
+                                <p class="text-xs text-gray-400 mt-1">PDF, Word, Excel, images — max 100MB each</p>
                                 <input type="file" id="tenderFileInput" multiple class="hidden" onchange="handleTenderFileSelect(event)">
                             </div>
                             <div id="tenderFileList" class="mt-3 space-y-2"></div>
@@ -3164,8 +3169,172 @@ async function saveTender(event) {
         loadRegion(tenderData.regionId);
         updateAllStats();
         showToast('Tender saved successfully!', 'success');
+        if (tenderData.contact && (tenderData.contact.name || tenderData.contact.email)) {
+            checkAndOfferCRMSync(tenderData.contact, tenderData.regionId);
+        }
     } catch (error) {
         showToast('Error saving tender: ' + error.message, 'error');
+    }
+}
+
+// ==================== TENDER → CRM SYNC ====================
+
+function checkAndOfferCRMSync(contact, regionId) {
+    const name  = (contact.name  || '').trim();
+    const email = (contact.email || '').trim().toLowerCase();
+    if (!name && !email) return;
+
+    const contacts = database.crmContacts || [];
+
+    // Find duplicates: exact email match (strongest), or same normalised name
+    const emailMatch = email ? contacts.find(c => (c.email || '').trim().toLowerCase() === email) : null;
+    const nameMatch  = name  ? contacts.find(c => (c.name  || '').trim().toLowerCase() === name.toLowerCase()) : null;
+    const duplicate  = emailMatch || nameMatch;
+
+    // Build the region name label
+    const regionObj = getCurrentStateData().regions && getCurrentStateData().regions.find(r => r.id === regionId);
+    const regionName = regionObj ? regionObj.name : regionId;
+
+    showCRMSyncPrompt(contact, regionId, regionName, duplicate);
+}
+
+function showCRMSyncPrompt(contact, regionId, regionName, duplicate) {
+    // Remove any existing prompt
+    const old = document.getElementById('crmSyncPrompt');
+    if (old) old.remove();
+
+    const isDupe = !!duplicate;
+    const dupeLabel = isDupe
+        ? (duplicate.name || duplicate.email || 'existing contact')
+        : '';
+
+    const headerColor  = isDupe ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200';
+    const iconColor    = isDupe ? 'text-amber-500' : 'text-blue-500';
+    const icon         = isDupe ? 'fa-exclamation-triangle' : 'fa-user-plus';
+    const headingText  = isDupe
+        ? 'Possible Duplicate in CRM'
+        : 'Add Contact to CRM?';
+    const bodyText     = isDupe
+        ? `<strong>${contact.name || contact.email}</strong> may already exist as <strong>${dupeLabel}</strong>. Would you like to update that record, add as new, or skip?`
+        : `Would you like to add <strong>${contact.name || contact.email}</strong> to CRM as a Council contact for <strong>${regionName}</strong>?`;
+
+    const actions = isDupe ? `
+        <button onclick="crmSyncUpdateExisting(${duplicate.id})" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg">
+            <i class="fas fa-sync-alt mr-1"></i> Update Existing
+        </button>
+        <button onclick="crmSyncAddNew()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
+            <i class="fas fa-plus mr-1"></i> Add as New
+        </button>
+        <button onclick="document.getElementById('crmSyncPrompt').remove()" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50">
+            Skip
+        </button>` : `
+        <button onclick="crmSyncAddNew()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
+            <i class="fas fa-user-plus mr-1"></i> Add to CRM
+        </button>
+        <button onclick="document.getElementById('crmSyncPrompt').remove()" class="px-4 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50">
+            Skip
+        </button>`;
+
+    const el = document.createElement('div');
+    el.id = 'crmSyncPrompt';
+    el.className = 'fixed bottom-6 right-6 z-50 max-w-sm w-full shadow-2xl rounded-2xl border-2 ' + headerColor + ' p-5 animate-fade-in';
+    el.style.animation = 'slideInRight 0.3s ease-out';
+    el.innerHTML = `
+        <div class="flex items-start gap-3 mb-3">
+            <i class="fas ${icon} ${iconColor} text-xl mt-0.5 flex-shrink-0"></i>
+            <div>
+                <p class="font-bold text-gray-900 text-sm mb-1">${headingText}</p>
+                <p class="text-sm text-gray-700 leading-snug">${bodyText}</p>
+            </div>
+            <button onclick="document.getElementById('crmSyncPrompt').remove()" class="ml-auto text-gray-400 hover:text-gray-600 flex-shrink-0"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex flex-wrap gap-2 justify-end">${actions}</div>`;
+
+    // Store context for the action buttons
+    el._contact  = contact;
+    el._regionId = regionId;
+    el._duplicate = duplicate;
+
+    document.body.appendChild(el);
+
+    // Auto-dismiss after 20 seconds
+    setTimeout(function() { const p = document.getElementById('crmSyncPrompt'); if (p) p.remove(); }, 20000);
+}
+
+async function crmSyncAddNew() {
+    const prompt = document.getElementById('crmSyncPrompt');
+    if (!prompt) return;
+    const contact  = prompt._contact;
+    const regionId = prompt._regionId;
+    prompt.remove();
+
+    const regionObj  = getCurrentStateData().regions && getCurrentStateData().regions.find(r => r.id === regionId);
+    const regionName = regionObj ? regionObj.name : regionId;
+
+    const newContact = {
+        id:          Date.now(),
+        state:       currentState,
+        category:    'Council',
+        regionId:    regionId,
+        regionIds:   [regionId],
+        regionNames: [regionName],
+        type:        'Primary',
+        name:        contact.name  || '',
+        position:    contact.position || '',
+        email:       contact.email || '',
+        directPhone: contact.phone || '',
+        mobile:      '',
+        department:  '',
+        linkedIn:    '',
+        notes:       'Added via Tender',
+        interactions:[],
+        createdAt:   new Date().toISOString(),
+        createdBy:   currentUser?.email || 'demo',
+        updatedAt:   new Date().toISOString(),
+        updatedBy:   currentUser?.email || 'demo'
+    };
+
+    if (!database.crmContacts) database.crmContacts = [];
+    database.crmContacts.push(newContact);
+
+    try {
+        if (!isDemoMode && currentUser && db) {
+            await db.collection('crmContacts').doc(String(newContact.id)).set(newContact);
+        }
+        if (isDemoMode) localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        updateAllStats();
+        showToast((contact.name || contact.email) + ' added to CRM!', 'success');
+    } catch(e) {
+        showToast('CRM save error: ' + e.message, 'error');
+    }
+}
+
+async function crmSyncUpdateExisting(existingId) {
+    const prompt = document.getElementById('crmSyncPrompt');
+    if (!prompt) return;
+    const contact = prompt._contact;
+    prompt.remove();
+
+    const idx = (database.crmContacts || []).findIndex(c => c.id === existingId);
+    if (idx === -1) { showToast('Contact not found', 'error'); return; }
+
+    const existing = database.crmContacts[idx];
+    // Merge: only overwrite blank fields so we don't clobber richer CRM data
+    if (!existing.position && contact.position) existing.position    = contact.position;
+    if (!existing.directPhone && contact.phone) existing.directPhone = contact.phone;
+    if (!existing.email && contact.email)        existing.email       = contact.email;
+    existing.updatedAt = new Date().toISOString();
+    existing.updatedBy = currentUser?.email || 'demo';
+    database.crmContacts[idx] = existing;
+
+    try {
+        if (!isDemoMode && currentUser && db) {
+            await db.collection('crmContacts').doc(String(existingId)).set(existing);
+        }
+        if (isDemoMode) localStorage.setItem('ausCrmDemoData', JSON.stringify(database));
+        showToast('CRM contact updated!', 'success');
+    } catch(e) {
+        showToast('CRM update error: ' + e.message, 'error');
     }
 }
 
@@ -3189,9 +3358,9 @@ function handleTenderFileSelect(event) {
 }
 
 function addTenderFiles(files) {
-    const MAX_SIZE = 10 * 1024 * 1024;
+    const MAX_SIZE = 100 * 1024 * 1024;
     files.forEach(file => {
-        if (file.size > MAX_SIZE) { showToast('"' + file.name + '" exceeds 10MB limit', 'error'); return; }
+        if (file.size > MAX_SIZE) { showToast('"' + file.name + '" exceeds 100MB limit', 'error'); return; }
         if (tenderStagedFiles.find(f => f.name === file.name)) return;
         tenderStagedFiles.push({ name: file.name, size: file.size, type: file.type, addedAt: new Date().toISOString() });
     });
