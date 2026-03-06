@@ -530,6 +530,10 @@
                     <button onclick="switchMainTab('qa')" id="tab-qa" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
                         <i class="fas fa-clipboard-check mr-2 text-teal-600"></i> Quality Assurance
                     </button>
+                    <button onclick="switchMainTab('myactions')" id="tab-myactions" class="main-tab py-4 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center">
+                        <i class="fas fa-tasks mr-2 text-indigo-600"></i> My Actions
+                        <span id="myActionsCount" class="ml-2 hidden bg-indigo-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1166,6 +1170,57 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
                             <textarea id="tenderDescription" rows="3" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none"></textarea>
                         </div>
+
+                        <!-- Assigned To + Follow-up Date -->
+                        <div class="col-span-2 border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                <i class="fas fa-user-check mr-2 text-indigo-600"></i> Assignment & Follow-up
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                                    <select id="tenderAssignedTo" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-indigo-500 focus:outline-none bg-white">
+                                        <option value="">— Unassigned —</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2 md:col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Follow-up Date</label>
+                                    <input type="date" id="tenderFollowUpDate" class="w-full rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-indigo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SharePoint Link -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <i class="fas fa-link mr-1 text-blue-500"></i> SharePoint Location
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="url" id="tenderSharePointUrl" placeholder="https://yourcompany.sharepoint.com/sites/..." class="flex-1 rounded-lg px-4 py-2 border-2 border-gray-200 focus:border-blue-600 focus:outline-none text-sm">
+                                <button type="button" onclick="openSharePoint()" class="px-3 py-2 bg-blue-50 border-2 border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 text-sm font-medium whitespace-nowrap" title="Open SharePoint link">
+                                    <i class="fas fa-external-link-alt"></i> Open
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Document Upload -->
+                        <div class="col-span-2 border-t pt-4 mt-2">
+                            <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                <i class="fas fa-paperclip mr-2 text-blue-600"></i> Documents
+                            </h4>
+                            <div id="tenderDropZone"
+                                 ondragover="event.preventDefault(); this.classList.add('border-blue-500','bg-blue-50')"
+                                 ondragleave="this.classList.remove('border-blue-500','bg-blue-50')"
+                                 ondrop="handleTenderFileDrop(event)"
+                                 class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
+                                 onclick="document.getElementById('tenderFileInput').click()">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-600 font-medium">Drag & drop files here, or click to browse</p>
+                                <p class="text-xs text-gray-400 mt-1">PDF, Word, Excel, images — max 10MB each</p>
+                                <input type="file" id="tenderFileInput" multiple class="hidden" onchange="handleTenderFileSelect(event)">
+                            </div>
+                            <div id="tenderFileList" class="mt-3 space-y-2"></div>
+                        </div>
                         
                         <div class="col-span-2 border-t pt-4 mt-2">
                             <h4 class="font-semibold text-purple-900 mb-3 flex items-center">
@@ -1193,6 +1248,10 @@
                     </div>
                 </form>
             </div>
+        </div>
+
+        <!-- MY ACTIONS TAB CONTENT -->
+        <div id="content-myactions" class="main-content hidden">
         </div>
 
         <!-- CRM Contact Modal -->
@@ -2744,6 +2803,8 @@ function switchMainTab(tab) {
         renderFeedback();
     } else if (tab === 'qa') {
         renderQA();
+    } else if (tab === 'myactions') {
+        renderMyActions();
     }
 }
 
@@ -2833,6 +2894,10 @@ function renderTenderCard(tender) {
             ${tender.closingDate ? `<div class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> ${formatDate(tender.closingDate)}</div>` : '<div></div>'}
             ${commentCount > 0 ? `<div class="text-xs text-blue-600 font-medium"><i class="fas fa-comments mr-1"></i> ${commentCount}</div>` : ''}
         </div>
+        ${tender.assignedTo ? `<div class="text-xs text-indigo-700 mt-2 font-medium"><i class="fas fa-user-check mr-1"></i> ${tender.assignedTo}</div>` : ''}
+        ${tender.followUpDate ? `<div class="text-xs text-orange-600 mt-1"><i class="fas fa-bell mr-1"></i> Follow-up: ${formatDate(tender.followUpDate)}</div>` : ''}
+        ${tender.sharePointUrl ? `<a href="${tender.sharePointUrl}" target="_blank" onclick="event.stopPropagation()" class="text-xs text-blue-500 mt-1 flex items-center hover:underline"><i class="fas fa-link mr-1"></i> SharePoint</a>` : ''}
+        ${(tender.attachments && tender.attachments.length > 0) ? `<div class="text-xs text-gray-500 mt-1"><i class="fas fa-paperclip mr-1"></i> ${tender.attachments.length} file${tender.attachments.length > 1 ? 's' : ''}</div>` : ''}
     </div>
     `;
 }
@@ -2848,6 +2913,14 @@ function showAddTenderModal(regionId) {
     document.getElementById('awardedFields').classList.add('hidden');
     document.getElementById('notWonFields').classList.add('hidden');
 
+    // Reset new fields
+    document.getElementById('tenderAssignedTo').value = '';
+    document.getElementById('tenderFollowUpDate').value = '';
+    document.getElementById('tenderSharePointUrl').value = '';
+    tenderStagedFiles = [];
+    renderTenderFileList();
+
+    populateTenderAssignedDropdown();
     renderTenderComments(null);
     document.getElementById('tenderModal').classList.remove('hidden');
 }
@@ -2891,6 +2964,14 @@ function editTender(id) {
     }
     
     renderTenderComments(id);
+
+    // Populate new fields
+    populateTenderAssignedDropdown(tender.assignedTo || '');
+    document.getElementById('tenderFollowUpDate').value = tender.followUpDate || '';
+    document.getElementById('tenderSharePointUrl').value = tender.sharePointUrl || '';
+    tenderStagedFiles = tender.attachments ? [...tender.attachments] : [];
+    renderTenderFileList();
+
     document.getElementById('tenderModal').classList.remove('hidden');
 }
 
@@ -3034,6 +3115,10 @@ async function saveTender(event) {
             email: document.getElementById('tenderContactEmail').value,
             phone: document.getElementById('tenderContactPhone').value
         },
+        assignedTo: document.getElementById('tenderAssignedTo').value || '',
+        followUpDate: document.getElementById('tenderFollowUpDate').value || '',
+        sharePointUrl: document.getElementById('tenderSharePointUrl').value.trim() || '',
+        attachments: tenderStagedFiles.map(f => ({ name: f.name, size: f.size || 0, type: f.type || '', addedAt: f.addedAt || new Date().toISOString() })),
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.email || 'demo'
     };
@@ -3085,6 +3170,161 @@ async function saveTender(event) {
 }
 
 // ==================== CRM FUNCTIONS ====================
+
+// Staged files for current tender modal session (metadata only — no binary in localStorage)
+let tenderStagedFiles = [];
+
+function handleTenderFileDrop(event) {
+    event.preventDefault();
+    const zone = document.getElementById('tenderDropZone');
+    zone.classList.remove('border-blue-500', 'bg-blue-50');
+    const files = Array.from(event.dataTransfer.files);
+    addTenderFiles(files);
+}
+
+function handleTenderFileSelect(event) {
+    const files = Array.from(event.target.files);
+    addTenderFiles(files);
+    event.target.value = '';
+}
+
+function addTenderFiles(files) {
+    const MAX_SIZE = 10 * 1024 * 1024;
+    files.forEach(file => {
+        if (file.size > MAX_SIZE) { showToast('"' + file.name + '" exceeds 10MB limit', 'error'); return; }
+        if (tenderStagedFiles.find(f => f.name === file.name)) return;
+        tenderStagedFiles.push({ name: file.name, size: file.size, type: file.type, addedAt: new Date().toISOString() });
+    });
+    renderTenderFileList();
+}
+
+function removeTenderFile(index) {
+    tenderStagedFiles.splice(index, 1);
+    renderTenderFileList();
+}
+
+function renderTenderFileList() {
+    const container = document.getElementById('tenderFileList');
+    if (!container) return;
+    if (tenderStagedFiles.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = tenderStagedFiles.map((f, i) => {
+        const icon = f.type && f.type.includes('pdf') ? 'fa-file-pdf text-red-500'
+            : (f.type && (f.type.includes('word') || f.name.endsWith('.docx'))) ? 'fa-file-word text-blue-600'
+            : (f.type && (f.type.includes('sheet') || f.name.endsWith('.xlsx'))) ? 'fa-file-excel text-green-600'
+            : (f.type && f.type.includes('image')) ? 'fa-file-image text-purple-500'
+            : 'fa-file text-gray-500';
+        const sizeStr = f.size ? (f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB') : '';
+        return '<div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">' +
+            '<div class="flex items-center gap-2 min-w-0">' +
+            '<i class="fas ' + icon + ' text-sm flex-shrink-0"></i>' +
+            '<span class="text-sm text-gray-800 truncate">' + f.name + '</span>' +
+            (sizeStr ? '<span class="text-xs text-gray-400 flex-shrink-0">' + sizeStr + '</span>' : '') +
+            '</div>' +
+            '<button type="button" onclick="removeTenderFile(' + i + ')" class="ml-2 text-gray-400 hover:text-red-500 flex-shrink-0"><i class="fas fa-times"></i></button>' +
+            '</div>';
+    }).join('');
+}
+
+function openSharePoint() {
+    const url = document.getElementById('tenderSharePointUrl') && document.getElementById('tenderSharePointUrl').value.trim();
+    if (!url) { showToast('Please enter a SharePoint URL first', 'warning'); return; }
+    window.open(url, '_blank');
+}
+
+async function populateTenderAssignedDropdown(selectedValue) {
+    selectedValue = selectedValue || '';
+    const select = document.getElementById('tenderAssignedTo');
+    if (!select) return;
+    select.innerHTML = '<option value="">— Unassigned —</option>';
+    if (isDemoMode) {
+        ['demo@local', 'alice@demo.com', 'bob@demo.com'].forEach(function(email) {
+            const opt = document.createElement('option');
+            opt.value = email; opt.textContent = email;
+            if (email === selectedValue) opt.selected = true;
+            select.appendChild(opt);
+        });
+        return;
+    }
+    try {
+        const snapshot = await db.collection('approvedUsers').where('approved', '==', true).get();
+        snapshot.docs.forEach(function(doc) {
+            const email = doc.data().email;
+            if (!email) return;
+            const opt = document.createElement('option');
+            opt.value = email; opt.textContent = email;
+            if (email === selectedValue) opt.selected = true;
+            select.appendChild(opt);
+        });
+    } catch(e) { console.error('Error loading users for dropdown:', e); }
+}
+
+// ==================== MY ACTIONS ====================
+
+function renderMyActions() {
+    const container = document.getElementById('content-myactions');
+    if (!container) return;
+    const userEmail = currentUser && currentUser.email ? currentUser.email : 'demo@local';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const myTenders = (database.tenders || []).filter(function(t) { return t.assignedTo === userEmail; });
+    myTenders.sort(function(a, b) {
+        const aDate = a.followUpDate || a.closingDate || '';
+        const bDate = b.followUpDate || b.closingDate || '';
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+        return new Date(aDate) - new Date(bDate);
+    });
+    const badge = document.getElementById('myActionsCount');
+    if (badge) {
+        if (myTenders.length > 0) { badge.textContent = myTenders.length; badge.classList.remove('hidden'); }
+        else { badge.classList.add('hidden'); }
+    }
+    if (myTenders.length === 0) {
+        container.innerHTML = '<div class="mb-6"><h2 class="text-2xl font-bold display-font text-gray-900 mb-2"><i class="fas fa-tasks mr-2 text-indigo-600"></i> My Actions</h2><p class="text-gray-600">Tenders assigned to you across all regions.</p></div><div class="text-center py-20 text-gray-400"><i class="fas fa-inbox text-5xl mb-4"></i><p class="text-lg font-medium">No tenders assigned to you</p><p class="text-sm mt-1">Tenders assigned to <strong>' + userEmail + '</strong> will appear here.</p></div>';
+        return;
+    }
+    const overdue = myTenders.filter(function(t) { const d = t.followUpDate || t.closingDate; return d && new Date(d) < today; });
+    const upcoming = myTenders.filter(function(t) { const d = t.followUpDate || t.closingDate; return !d || new Date(d) >= today; });
+    const statusColors = { 'POTENTIAL_UNCONFIRMED': 'status-potential', 'TO_PRICE': 'status-to-price', 'PRICED': 'status-priced', 'NOT_PRICING': 'status-not-pricing', 'AWARDED': 'bg-yellow-100 text-yellow-800', 'NOT_WON': 'bg-red-100 text-red-800' };
+    function renderGroup(items, title, color) {
+        if (items.length === 0) return '';
+        const cards = items.map(function(t) {
+            const region = getCurrentStateData().regions && getCurrentStateData().regions.find(function(r) { return r.id === t.regionId; });
+            const attachCount = t.attachments ? t.attachments.length : 0;
+            const dateLabel = t.followUpDate
+                ? '<span class="text-xs ' + color + ' font-medium"><i class="fas fa-bell mr-1"></i> Follow-up: ' + formatDate(t.followUpDate) + '</span>'
+                : t.closingDate ? '<span class="text-xs text-gray-500"><i class="fas fa-calendar mr-1"></i> Closes: ' + formatDate(t.closingDate) + '</span>' : '';
+            return '<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200 card-hover cursor-pointer" onclick="jumpToTender(' + t.id + ')">' +
+                '<div class="flex justify-between items-start mb-2">' +
+                '<span class="text-xs font-semibold px-2 py-1 rounded ' + (statusColors[t.status] || 'bg-gray-100') + '">' + t.status.replaceAll('_',' ') + '</span>' +
+                '<button onclick="event.stopPropagation(); editTender(' + t.id + ')" class="text-xs text-blue-600 hover:underline"><i class="fas fa-edit"></i></button></div>' +
+                '<h3 class="font-bold text-gray-900 mb-1 line-clamp-2">' + t.title + '</h3>' +
+                '<p class="text-xs text-gray-500 mb-2">' + (region ? region.name : t.regionId) + ' &bull; ' + t.category + '</p>' +
+                (t.value ? '<p class="text-sm text-gray-700 mb-2 font-medium">' + t.value + '</p>' : '') +
+                '<div class="flex flex-wrap gap-2 items-center">' + dateLabel +
+                (t.sharePointUrl ? '<a href="' + t.sharePointUrl + '" target="_blank" onclick="event.stopPropagation()" class="text-xs text-blue-500 hover:underline"><i class="fas fa-link mr-1"></i>SharePoint</a>' : '') +
+                (attachCount > 0 ? '<span class="text-xs text-gray-500"><i class="fas fa-paperclip mr-1"></i>' + attachCount + ' file' + (attachCount>1?'s':'') + '</span>' : '') +
+                '</div></div>';
+        }).join('');
+        return '<div class="mb-8"><h3 class="text-lg font-bold ' + color + ' mb-4 flex items-center"><span class="w-2 h-2 rounded-full bg-current mr-2 inline-block"></span>' + title + ' (' + items.length + ')</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">' + cards + '</div></div>';
+    }
+    container.innerHTML =
+        '<div class="mb-6 flex justify-between items-center">' +
+        '<div><h2 class="text-2xl font-bold display-font text-gray-900 mb-2"><i class="fas fa-tasks mr-2 text-indigo-600"></i> My Actions</h2><p class="text-gray-600">Tenders assigned to <strong>' + userEmail + '</strong></p></div>' +
+        '<div class="text-sm text-gray-500 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100"><span class="font-bold text-indigo-700 text-lg">' + myTenders.length + '</span> total assigned</div></div>' +
+        renderGroup(overdue, 'Overdue / Past Due', 'text-red-600') +
+        renderGroup(upcoming, 'Upcoming & Active', 'text-indigo-700');
+}
+
+function jumpToTender(tenderId) {
+    const tender = (database.tenders || []).find(function(t) { return t.id === tenderId; });
+    if (!tender) return;
+    switchMainTab('tenders');
+    loadRegion(tender.regionId);
+    setTimeout(function() { editTender(tenderId); }, 200);
+}
+
+// ==================== CRM FUNCTIONS (restored) ====================
 
 function handleCategoryChange() {
     const category = document.getElementById('crmCategory').value;
